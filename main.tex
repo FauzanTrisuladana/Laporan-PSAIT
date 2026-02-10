@@ -1,0 +1,198 @@
+\documentclass[a4paper,oneside,11pt]{book}
+
+% Package dasar
+\usepackage[utf8]{inputenc}     % untuk karakter UTF-8
+\usepackage[T1]{fontenc}        % encoding font
+\usepackage{graphicx}
+\usepackage{titling}
+\usepackage{titlesec}
+\usepackage[backend=biber,style=ieee]{biblatex}
+\addbibresource{ref.bib}
+
+% Package tambahan untuk layout dan formatting
+\usepackage{geometry}           % untuk margin
+\usepackage{setspace}           % untuk spasi baris
+\usepackage{fancyhdr}           % untuk header/footer
+\usepackage{hyperref}           % untuk link dan bookmark
+\usepackage{listings}           % untuk code Python
+\usepackage{xcolor}             % untuk warna
+\usepackage{float}              % untuk posisi gambar
+\usepackage{tocloft}            % Untuk membuat daftar isi menampilkan "Bab 1. Pendahuluan" instead of "1. Pendahuluan",
+\usepackage{lipsum}             % untuk lorem ipsum
+\usepackage{indentfirst}        % untuk indent paragraf pertama
+\usepackage{enumitem}           % untuk kustomisasi penomoran list (A., B., dst)
+
+% Pengaturan layout
+\geometry{left=3cm, right=2cm, top=2cm, bottom=2cm}
+\onehalfspacing  % spasi 1.5
+
+% Format chapter
+\titleformat{\chapter}[hang]
+  {\normalfont\huge\bfseries\centering}{\chaptertitlename\ \thechapter.}{1em}{}
+
+% Format code Python
+\lstset{
+    language=PHP,
+    basicstyle=\ttfamily\small,
+    keywordstyle=\color{blue}\bfseries,
+    commentstyle=\color{gray},
+    stringstyle=\color{red},
+    numbers=left,
+    numberstyle=\tiny,
+    frame=single,
+    breaklines=true,
+    showstringspaces=false,
+    xleftmargin=2cm,
+    xrightmargin=1cm,
+    morekeywords={Route,Controller,Request,Response,Blade,Model,Migration,Artisan,middleware,Auth,extends,section,yield,csrf,foreach,endif}
+}
+
+% Pengaturan hyperref
+\hypersetup{
+    colorlinks=true,
+    linkcolor=black,
+    filecolor=magenta,
+    urlcolor=blue,
+    citecolor=red
+}
+
+% Info dokumen
+\newcommand{\Pertemuan}{3}
+\newcommand{\Materi}{Routing dan Controller pada Laravel}
+\title{Laporan Praktikum \\ Praktikum Sistem Administrasi dan Informasi Terdistribusi\\
+Pertemuan \Pertemuan\\
+\Materi}
+\newcommand{\NamaMahasiswa}{Muhammad Fauzan Putra Trisuladana}
+\newcommand{\NIMMahasiswa}{24/538699/SV/24524}
+\newcommand{\KelasMahasiswa}{A1}
+\newcommand{\DosenPengampu}{Dr. Eng. Ir. Ganjar Alfian, S.T., M. Eng.}
+
+\author{\NamaMahasiswa\\\NIMMahasiswa}
+
+\begin{document}
+
+% Jika ingin daftar pustaka muncul meskipun belum ada entri di ref.bib,
+% tambahkan entri BibTeX ke file ref.bib terlebih dulu.
+
+% Title Page
+\begin{titlingpage} 
+\begin{center}
+
+\vspace{4cm} 
+\begin{Large} 
+\textbf{\thetitle} \\
+\end{Large}
+\vspace{2cm}
+
+\includegraphics[height=8cm]{lambang ugm.png}\\ 
+\vspace{2cm}
+
+\textbf{Disusun oleh:}\\[0.8em]
+\begin{minipage}{0.8\textwidth}
+\raggedright
+\begin{large}
+\begin{tabular}{@{}l@{\hspace{1.5em}}c@{\hspace{1.5em}}p{\textwidth}@{}}
+Nama & : & \NamaMahasiswa \\
+NIM & : & \NIMMahasiswa \\
+Kelas & : & \KelasMahasiswa \\
+Dosen Pengampu & : & \DosenPengampu \\
+\end{tabular}
+\end{large}
+\end{minipage}
+
+\vspace{2cm}
+\begin{Large}
+\textbf{Program Studi D-IV Teknologi Rekayasa Perangkat Lunak} \\
+\textbf{Departemen Teknik Elektro dan Informatika} \\
+\textbf{Sekolah Vokasi}\\
+\textbf{Universitas Gadjah Mada}\\
+\textbf{Yogyakarta}\\
+\textbf{2026}\\
+\end{Large}
+
+\end{center}
+\end{titlingpage}
+
+% Header/Footer
+\pagestyle{fancy}
+\fancyhf{}            % kosongkan header/footer default
+\renewcommand{\headrulewidth}{0pt} % hilangkan garis header (atas)
+\renewcommand{\footrulewidth}{0pt} % pastikan tidak ada garis footer
+\fancyfoot[C]{\thepage} % taruh nomor halaman di footer tengah
+
+% Pastikan halaman dengan style 'plain' (mis. ToC/List) juga tanpa garis atas
+\fancypagestyle{plain}{
+  \fancyhf{}
+  \renewcommand{\headrulewidth}{0pt}
+  \renewcommand{\footrulewidth}{0pt}
+  \fancyfoot[C]{\thepage}
+}
+
+
+% --- Styling Judul Daftar Isi, Gambar, dan Kode ---
+\renewcommand{\cfttoctitlefont}{\hfill\normalfont\LARGE\bfseries}
+\renewcommand{\cftaftertoctitle}{\hfill}
+\renewcommand{\cftbeforetoctitleskip}{1em}
+\renewcommand{\cftaftertoctitleskip}{1.5em}
+
+% --- Format Bab di Daftar Isi ---
+\renewcommand{\cftchappresnum}{Bab~}
+\renewcommand{\cftchapaftersnum}{.}
+\renewcommand{\cftchapnumwidth}{3.5em}
+\renewcommand{\cftchapfont}{\bfseries}
+\renewcommand{\cftchappagefont}{\bfseries}
+
+% --- Spasi dan Estetika ---
+\setlength{\cftbeforechapskip}{0.8em} % jarak antar bab
+\setlength{\cftbeforesecskip}{0.2em}  % jarak antar subbab
+\renewcommand{\cftsecfont}{\normalfont}
+\renewcommand{\cftsubsecfont}{\normalfont}
+
+% --- Judul Lokal ---
+\renewcommand{\contentsname}{\centering Daftar Isi}
+\renewcommand{\listfigurename}{\centering Daftar Gambar}
+\renewcommand{\lstlistlistingname}{\centering Daftar Kode}
+
+% --- Gaya Daftar Gambar dan Daftar Kode ---
+\renewcommand{\cftloftitlefont}{\hfill\normalfont\LARGE\bfseries}
+\renewcommand{\cftafterloftitle}{\hfill}
+
+\tableofcontents
+
+\newpage
+% Daftar Gambar
+\listoffigures
+
+\newpage
+% Daftar Listing
+\lstlistoflistings
+
+% --- Halaman Laporan Pertemuan (seperti contoh gambar) ---
+% Tidak pakai \chapter agar bisa menyatu dengan halaman sebelumnya.
+\newpage
+\begin{center}
+\textbf{\LARGE Pertemuan \Pertemuan\\
+{[{\Materi}]}}
+\end{center}
+
+\begin{enumerate}[label=\Alph*., leftmargin=*, itemsep=2.0em]
+  \item \phantomsection\addcontentsline{toc}{section}{\Alph{enumi}. Tujuan Percobaan}\textbf{Tujuan Percobaan}
+  \begin{enumerate}[label=\arabic*., leftmargin=2.0em]
+    \item 
+    \item 
+  \end{enumerate}
+
+  \item \phantomsection\addcontentsline{toc}{section}{\Alph{enumi}. Dasar Teori}\textbf{Dasar Teori}
+  {\color{red}(Silakan anda tambahkan teori terkait percobaan unit ini dan cantumkan sumber referensinya
+  pada bagian daftar pustaka.)}
+
+  \item \phantomsection\addcontentsline{toc}{section}{\Alph{enumi}. Hasil dan Pembahasan}\textbf{Hasil dan Pembahasan}
+
+  \item \phantomsection\addcontentsline{toc}{section}{\Alph{enumi}. Kesimpulan}\textbf{Kesimpulan}
+
+  \item \phantomsection\addcontentsline{toc}{section}{\Alph{enumi}. Daftar Pustaka}\textbf{Daftar Pustaka}
+  \nocite{*}
+  \printbibliography[heading=none]
+\end{enumerate}
+
+\end{document}

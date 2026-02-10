@@ -1,0 +1,5 @@
+\contentsline {section}{A. Tujuan Percobaan}{4}{section*.1}%
+\contentsline {section}{B. Dasar Teori}{4}{section*.2}%
+\contentsline {section}{C. Hasil dan Pembahasan}{4}{section*.3}%
+\contentsline {section}{D. Kesimpulan}{4}{section*.4}%
+\contentsline {section}{E. Daftar Pustaka}{4}{section*.5}%
