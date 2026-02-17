@@ -28,8 +28,14 @@
 
 % Penomoran section dengan huruf kapital (A, B, C, ...)
 \renewcommand{\thesection}{\Alph{section}}
-\renewcommand{\thesubsection}{\alph{subsection}}
-\renewcommand{\thesubsubsection}{\alph{subsubsection}}
+\renewcommand{\thesubsection}{\thesection.\arabic{subsection}}
+\renewcommand{\thesubsubsection}{\thesubsection.\arabic{subsubsection}}
+
+% Penomoran figure mengikuti section (misal, Gambar A.1, A.2, ...)
+\renewcommand{\thefigure}{\thesection.\arabic{figure}}
+\makeatletter
+\@addtoreset{figure}{section}
+\makeatother
 
 % Format chapter
 \titleformat{\chapter}[hang]
