@@ -43,19 +43,20 @@
 
 % Format code Python
 \lstset{
-    language=PHP,
-    basicstyle=\ttfamily\small,
-    keywordstyle=\color{blue}\bfseries,
-    commentstyle=\color{gray},
-    stringstyle=\color{red},
-    numbers=left,
-    numberstyle=\tiny,
-    frame=single,
-    breaklines=true,
-    showstringspaces=false,
-    xleftmargin=2cm,
-    xrightmargin=1cm,
-    morekeywords={Route,Controller,Request,Response,Blade,Model,Migration,Artisan,middleware,Auth,extends,section,yield,csrf,foreach,endif}
+  language=PHP,
+  basicstyle=\ttfamily\small,
+  keywordstyle=\color{blue}\bfseries,
+  commentstyle=\color{gray},
+  stringstyle=\color{red},
+  numbers=left,
+  numberstyle=\tiny,
+  frame=single,
+  breaklines=true,
+  showstringspaces=false,
+  xleftmargin=2cm,
+  xrightmargin=1cm,
+  captionpos=b,
+  morekeywords={Route,Controller,Request,Response,Blade,Model,Migration,Artisan,middleware,Auth,extends,section,yield,csrf,foreach,endif}
 }
 
 % Pengaturan hyperref
@@ -208,6 +209,7 @@ pada bagian daftar pustaka.)}
   \item Mengonfigurasi pengaturan VM, termasuk alokasi RAM, ukuran hard disk, dan pengaturan jaringan.
   \item Memulai VM dan mengikuti proses instalasi Ubuntu Server, termasuk pemilihan bahasa, zona waktu, dan partisi disk.
   \item Melakukan konfigurasi jaringan pada VirtualBox untuk memastikan VM dapat terhubung dengan Host Computer dan jaringan lokal.
+  \item Melakukan ping dari Host Computer ke VM untuk memastikan koneksi jaringan berhasil dan kedua sistem dapat saling berkomunikasi.
 \end{enumerate}
 
 \subsection{Mendownload file ISO Ubuntu Server}\
@@ -215,12 +217,154 @@ pada bagian daftar pustaka.)}
 \begin{figure}[H]
   \centering
   \includegraphics[width=0.8\textwidth]{resource/image/download ubuntu server.png}
-  \label{fig:download-ubuntu-server}
   \caption{Tampilan halaman download Ubuntu Server}
+  \label{fig:download-ubuntu-server}
 \end{figure}
 \par Pada gambar di atas \ref{fig:download-ubuntu-server}, saya mengunduh file ISO Ubuntu Server dari situs resmi Ubuntu di \url{https://ubuntu.com/download/server}. Saya memilih versi terbaru yang tersedia untuk memastikan kami mendapatkan fitur dan pembaruan keamanan terbaru.
 
+\subsection{Membuat Virtual Machine Baru}
+\par Setelah berhasil mengunduh file ISO Ubuntu Server, langkah selanjutnya adalah membuat Virtual Machine baru di Oracle VM VirtualBox. Saya membuka aplikasi VirtualBox dan mengklik tombol "New" pada gambar \ref{fig:create-new-vm} untuk memulai proses pembuatan VM.
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.8\textwidth]{resource/image/create new vm.png}
+  \caption{Tampilan pembuatan Virtual Machine baru di VirtualBox}
+  \label{fig:create-new-vm}
+\end{figure}
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.8\textwidth]{resource/image/create new vm2.png}
+  \caption{Pengaturan nama, jenis OS, dan alokasi RAM untuk Virtual Machine}
+  \label{fig:create-new-vm-2}
+\end{figure}
+\par Pada gambar di atas \ref{fig:create-new-vm-2}, saya memberikan nama untuk Virtual Machine dengan nama "A1\_UbuntuServer\_Zan", memilih jenis sistem operasi sebagai "Linux", dan versi sebagai "Ubuntu (64-bit)". Dan path ke file ISO Ubuntu Server yang sudah saya unduh sebelumnya. Saya juga centang opsi "skip unattended installation" untuk memastikan proses instalasi berjalan secara otomatis sehingga tidak perlu mengatur konfigurasi hostname dan.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.8\textwidth]{resource/image/create new vm3.png}
+  \caption{Pengaturan alokasi RAM dan jumlah prosesor untuk Virtual Machine}
+  \label{fig:create-new-vm-3}
+\end{figure}
+\par Pada gambar di atas \ref{fig:create-new-vm-3}, saya mengalokasikan ukuran ram dan prosesor yang cukup untuk menjalankan Ubuntu Server dengan lancar. Saya memilih ukuran RAM sebesar 2048 MB (2 GB) dan jumlah prosesor sebanyak 1 core yang juga ukuran minimal untuk menjalankan Ubuntu Server dengan baik.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.8\textwidth]{resource/image/create new vm4.png}
+  \caption{Pengaturan penyimpanan hard disk virtual untuk Virtual Machine}
+  \label{fig:create-new-vm-4}
+\end{figure}
+\par Pada gambar di atas \ref{fig:create-new-vm-4}, saya memilih untuk membuat hard disk virtual baru dengan ukuran sebesar 20 GB. Saya memilih format VDI (VirtualBox Disk Image).
+
+\subsection{Instalasi Ubuntu Server di Virtual Machine}
+\par Setelah berhasil membuat Virtual Machine baru, langkah selanjutnya adalah memulai VM dan mengikuti proses instalasi Ubuntu Server. Saya mengklik tombol "Start" kemudian muncul halaman seperti pada gambar \ref{fig:start-vm} saat start telah dijalankan.
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.8\textwidth]{resource/image/start vm.png}
+  \caption{Tampilan awal saat memulai Virtual Machine}
+  \label{fig:start-vm}
+\end{figure}
+\par Pada gambar di atas \ref{fig:start-vm}, setelah Virtual Machine dijalankan, akan muncul tampilan awal GNU GRUB Ubuntu Server. Pada tahap ini, saya memilih opsi "Try or Install Ubuntu Server" untuk memulai proses instalasi Ubuntu Server pada VM dan menekan Enter pada pilihat itu. Tampilan ini menandakan bahwa VM telah berhasil membaca file ISO Ubuntu Server dan siap untuk proses instalasi sistem operasi di vm.
+
+\par Selanjutnya, saya mengikuti langkah-langkah instalasi yang muncul di layar, termasuk pemilihan bahasa, zona waktu, dan partisi disk. Saya akan mencantumkan beberapa gambar yang menurut saya penting untuk menunjukkan proses instalasi Ubuntu Server di Virtual Machine.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.8\textwidth]{resource/image/pilih bahasa.png}
+  \caption{Tampilan pemilihan bahasa pada proses instalasi Ubuntu Server}
+  \label{fig:pilih-bahasa}
+\end{figure}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.8\textwidth]{resource/image/full or not.png}
+  \caption{Tampilan pemilihan tipe instalasi Ubuntu Server (full/minimized)}
+  \label{fig:full-or-not}
+\end{figure}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.8\textwidth]{resource/image/storage layout.png}
+  \caption{Tampilan pengaturan storage layout (guided storage) pada Ubuntu Server}
+  \label{fig:storage-layout}
+\end{figure}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.8\textwidth]{resource/image/ubuntu pro.png}
+  \caption{Tampilan opsi Ubuntu Pro pada proses instalasi}
+  \label{fig:ubuntu-pro}
+\end{figure}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.8\textwidth]{resource/image/reboot now.png}
+  \caption{Tampilan instalasi selesai dan opsi reboot}
+  \label{fig:reboot-now}
+\end{figure}
+
+\par Setelah memilih opsi instalasi dari menu GRUB pada gambar \ref{fig:start-vm}, saya memilih "English" pada layar pemilihan bahasa di gambar \ref{fig:pilih-bahasa}. Selanjutnya saya memilih tipe instalasi "Ubuntu Server" pada gambar \ref{fig:full-or-not} dan menekan "Done". Kemudian saya mengatur partisi penyimpanan dengan memilih "Use an entire disk" pada gambar \ref{fig:storage-layout} dan menekan "Done" untuk melanjutkan. Pada tahap Ubuntu Pro di gambar \ref{fig:ubuntu-pro}, saya memilih "Skip for now" lalu menekan "Continue". Terakhir, ketika instalasi selesai pada gambar \ref{fig:reboot-now}, saya memilih "Reboot Now" sehingga Virtual Machine melakukan restart dan Ubuntu Server siap digunakan.
+
+\subsection{Konfigurasi Jaringan pada VirtualBox}
+\par Setelah berhasil menginstal Ubuntu Server di Virtual Machine, dengan selesainya reboot pada gambar \ref{fig:reboot-now}, langkah selanjutnya adalah melakukan konfigurasi jaringan pada VirtualBox untuk memastikan VM dapat terhubung dengan Host Computer dan jaringan lokal. Sebelum itu saya akan memastikan bahwa jaringan pada VM sudah aktif dengan menjalankan perintah berikut di terminal Ubuntu Server:
+\begin{lstlisting}[language=bash, caption={Perintah untuk memeriksa status jaringan di Ubuntu Server}, label={lst:ip}]
+ip a
+\end{lstlisting}
+\par Dan jalankan juga perintah berikut di terminal Host Computer untuk memeriksa ip di windows:
+\begin{lstlisting}[language=bash, caption={Perintah untuk memeriksa status jaringan pada VirtualBox di Host Computer}, label={lst:ipconfig}]
+ipconfig
+\end{lstlisting}
+\par Perintah di atas akan menampilkan informasi tentang semua interface jaringan yang tersedia di Host Computer. Saya memastikan bahwa interface jaringan yang digunakan untuk koneksi sudah aktif dan memiliki alamat IP yang valid.
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.8\textwidth]{resource/image/ip.png}
+  \caption{Tampilan hasil perintah ip dan ipconfig}
+  \label{fig:ipconfig}
+\end{figure}
+\par Pada gambar di atas \ref{fig:ipconfig}, saya memeriksa status jaringan pada Ubuntu Server dengan perintah "ip a" dan pada Host Computer dengan perintah "ipconfig". Saya memastikan bahwa kedua sistem memiliki alamat IP yang valid dan dapat saling terhubung. Namun, memang belum sesuai dengan yang diharapkan karena Biasanya IP NAT adalah 10.0.2.15. dan Ip Host Computer biasanya memiliki IP 192.168.1.x. Hal ini menunjukkan bahwa saya belum melakukan konfigurasi jaringan pada VirtualBox. Oleh karena itu, saya akan melakukan konfigurasi jaringan pada VirtualBox untuk memastikan koneksi agar VM dapat terhubung dengan Host Computer dan jaringan lokal yang ditandai dengan Ip pada keduanya sama.
+
+\par Untuk melakukan konfigurasi jaringan pada VirtualBox, saya mengikuti langkah-langkah berikut:
+\begin{enumerate}[label=\alph*.]
+  \item Mematikan Virtual Machine jika sedang berjalan.
+  \item Membuka pengaturan Virtual Machine di VirtualBox.
+  \item Navigasi ke bagian "Network" dan memilih adapter yang ingin dikonfigurasi (misalnya, Adapter 1).
+  \item Mengubah "Attached to" menjadi "Host Only Adapter" untuk menghubungkan VM langsung ke jaringan lokal.
+  \item Memilih interface jaringan yang sesuai pada Host Computer (misalnya, Wi-Fi atau Ethernet).
+  \item Menyimpan pengaturan dan memulai kembali Virtual Machine.
+\end{enumerate}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.8\textwidth]{resource/image/host only network2.png}
+  \caption{Tampilan pengaturan Host-Only Network di VirtualBox}
+  \label{fig:host-only-network}
+\end{figure}
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.8\textwidth]{resource/image/host only network.png}
+  \caption{Tampilan pengaturan Host-Only Network di VirtualBox}
+  \label{fig:network-settings}
+\end{figure}
+\par Pertama saya akan membuat Network baru di network manager VirtualBox dengan nama "Host-Only Network" dan mengatur IP untuk network tersebut menjadi 192.168.x.x/24. Saya sesuaikan Ip nya secara otomatis dengan cara di centang opsi yang ada tulisan "Configure Adapter Automatically" pada gambar \ref{fig:host-only-network}. Setelah itu, saya akan mengubah pengaturan jaringan pada Virtual Machine dengan memilih "Host-Only Adapter" dan memilih network "Host-Only Network" yang sudah saya buat sebelumnya pada gambar \ref{fig:network-settings}. Setelah menyimpan pengaturan dan memulai kembali Virtual Machine, dengan begitu seharusnya VM sudah terhubung dengan Host Computer dan jaringan lokal dengan IP yang sesuai.
+
+\subsection{Ping Dari Host Computer}
+\par Setelah melakukan konfigurasi jaringan pada VirtualBox, langkah terakhir adalah melakukan ping dari Host Computer ke VM untuk memastikan koneksi jaringan berhasil dan kedua sistem dapat saling berkomunikasi. Saya membuka Command Prompt di Host Computer dan menjalankan perintah berikut:
+\begin{lstlisting}[language=bash, caption={Perintah untuk melakukan ping dari Host Computer ke VM}, label={lst:ping}]
+ping 192.168.56.101 
+\end{lstlisting}
+\par Saya mendapatkan ip tersebut dari perintah "ip a" di terminal Ubuntu Server dan mengambil bagian enp0s3 yang merupakan interface jaringan yang terhubung ke Host Computer, bagian inet 6 yang memiliki format 192.168.x.x/24, seperti pada gambar \ref{fig:ipconfig}. Setelah menjalankan perintah ping di atas, saya mendapatkan balasan dari VM yang menunjukkan bahwa koneksi jaringan berhasil dan kedua sistem dapat saling berkomunikasi \ref{fig:ping-result}. Hal ini menandakan bahwa konfigurasi jaringan pada VirtualBox sudah benar dan VM sudah terhubung dengan Host Computer serta jaringan lokal.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.8\textwidth]{resource/image/ping.png}
+  \caption{Tampilan hasil perintah ping dari Host Computer ke VM}
+  \label{fig:ping-result}
+\end{figure}
+
 \section{Kesimpulan}
+\par Berdasarkan praktikum yang telah dilakukan, instalasi Ubuntu Server pada Oracle VM VirtualBox berhasil dijalankan mulai dari tahap menyiapkan file ISO, membuat Virtual Machine, hingga proses instalasi selesai dan sistem dapat melakukan reboot dengan normal (dari gambar \ref{fig:download-ubuntu-server} sampai \ref{fig:reboot-now}). Proses pembuatan VM mencakup penentuan nama dan jenis OS, alokasi RAM/CPU, serta pembuatan media penyimpanan virtual sehingga Ubuntu Server dapat berjalan sesuai kebutuhan (gambar \ref{fig:create-new-vm} sampai \ref{fig:create-new-vm-4}).
+
+\par Pada tahap konfigurasi jaringan, pengecekan alamat IP pada Ubuntu Server dan Host Computer dilakukan menggunakan perintah \texttt{ip a} dan \texttt{ipconfig} (listing \ref{lst:ip} dan \ref{lst:ipconfig}, serta gambar \ref{fig:ipconfig}). Hasil pengecekan menunjukkan bahwa konfigurasi jaringan awal belum sesuai untuk komunikasi langsung antara Host dan VM, sehingga dilakukan penyesuaian jaringan dengan menggunakan Host-Only Adapter melalui pengaturan VirtualBox (gambar \ref{fig:host-only-network} dan \ref{fig:network-settings}).
+
+\par Setelah konfigurasi diterapkan, konektivitas diuji menggunakan perintah \texttt{ping} dari Host Computer ke alamat IP Ubuntu Server (listing \ref{lst:ping}) dan memperoleh balasan yang menandakan koneksi berhasil (gambar \ref{fig:ping-result}). Dengan demikian, tujuan praktikum terkait instalasi VM dan konfigurasi jaringan VirtualBox untuk komunikasi Host dengan Guest dapat tercapai.
 
 \section{Daftar Pustaka}
 \nocite{*}
