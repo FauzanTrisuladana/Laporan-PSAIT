@@ -28,8 +28,14 @@
 
 % Penomoran section dengan huruf kapital (A, B, C, ...)
 \renewcommand{\thesection}{\Alph{section}}
-\renewcommand{\thesubsection}{\alph{subsection}}
-\renewcommand{\thesubsubsection}{\alph{subsubsection}}
+\renewcommand{\thesubsection}{\thesection.\arabic{subsection}}
+\renewcommand{\thesubsubsection}{\thesubsection.\arabic{subsubsection}}
+
+% Penomoran figure mengikuti section (misal, Gambar A.1, A.2, ...)
+\renewcommand{\thefigure}{\thesection.\arabic{figure}}
+\makeatletter
+\@addtoreset{figure}{section}
+\makeatother
 
 % Format chapter
 \titleformat{\chapter}[hang]
@@ -62,8 +68,8 @@
 }
 
 % Info dokumen
-\newcommand{\Pertemuan}{3}
-\newcommand{\Materi}{Routing dan Controller pada Laravel}
+\newcommand{\Pertemuan}{1}
+\newcommand{\Materi}{Instalasi Ubuntu Server dengan VirtualBox}
 \title{Laporan Praktikum \\ Praktikum Sistem Administrasi dan Informasi Terdistribusi\\
 Pertemuan \Pertemuan\\
 \Materi}
@@ -181,9 +187,11 @@ Dosen Pengampu & : & \DosenPengampu \\
 \end{center}
 
 \section{Tujuan Percobaan}
-\begin{enumerate}
-  \item 
-  \item 
+\begin{enumerate}[label=\alph*.]
+  \item Mahasiswa mampu memahami prinsip kerja virtualisasi, perbedaan antara Host OS dan Guest OS, serta peran Hypervisor dalam manajemen sumber daya.
+  \item Mahasiswa mampu melakukan instalasi dan konfigurasi awal Oracle VM VirtualBox pada komputer host.
+  \item Mahasiswa mampu mengonfigurasi Virtual Machine (VM) dan menginstal sistem operasi Linux Server (Ubuntu) di dalamnya.
+  \item Mahasiswa memahami konfigurasi jaringan pada VirtualBox untuk menghubungkan Host Computer dengan Virtual Machine.
 \end{enumerate}
 
 \section{Dasar Teori}
@@ -192,6 +200,25 @@ Dosen Pengampu & : & \DosenPengampu \\
 pada bagian daftar pustaka.)}
 
 \section{Hasil dan Pembahasan}
+\par Pada praktikum kali ini, saya melakukan instalasi Ubuntu Server pada Oracle VM VirtualBox. Proses instalasi berjalan lancar dengan beberapa langkah utama, yaitu:
+\begin{enumerate}[label=\alph*.]
+  \item Mengunduh dan menginstal Oracle VM VirtualBox pada komputer host (sudah terinstall di komputer saya).
+  \item Mengunduh file ISO Ubuntu Server dari situs resmi Ubuntu untuk digunakan sebagai media instalasi.
+  \item Membuat Virtual Machine baru dengan spesifikasi yang sesuai untuk Ubuntu Server.
+  \item Mengonfigurasi pengaturan VM, termasuk alokasi RAM, ukuran hard disk, dan pengaturan jaringan.
+  \item Memulai VM dan mengikuti proses instalasi Ubuntu Server, termasuk pemilihan bahasa, zona waktu, dan partisi disk.
+  \item Melakukan konfigurasi jaringan pada VirtualBox untuk memastikan VM dapat terhubung dengan Host Computer dan jaringan lokal.
+\end{enumerate}
+
+\subsection{Mendownload file ISO Ubuntu Server}\
+\par Karena komputer yang saya pakai sudah terinstall Oracle VM VirtualBox, langkah pertama yang saya lakukan adalah mengunduh file ISO Ubuntu Server. File ISO ini akan digunakan sebagai media instalasi untuk Virtual Machine yang akan saya buat di VirtualBox.
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.8\textwidth]{resource/image/download ubuntu server.png}
+  \label{fig:download-ubuntu-server}
+  \caption{Tampilan halaman download Ubuntu Server}
+\end{figure}
+\par Pada gambar di atas \ref{fig:download-ubuntu-server}, saya mengunduh file ISO Ubuntu Server dari situs resmi Ubuntu di \url{https://ubuntu.com/download/server}. Saya memilih versi terbaru yang tersedia untuk memastikan kami mendapatkan fitur dan pembaruan keamanan terbaru.
 
 \section{Kesimpulan}
 
