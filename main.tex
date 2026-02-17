@@ -26,6 +26,9 @@
 \geometry{left=3cm, right=2cm, top=2cm, bottom=2cm}
 \onehalfspacing  % spasi 1.5
 
+% Penomoran section dengan huruf kapital (A, B, C, ...)
+\renewcommand{\thesection}{\Alph{section}}
+
 % Format chapter
 \titleformat{\chapter}[hang]
   {\normalfont\huge\bfseries\centering}{\chaptertitlename\ \thechapter.}{1em}{}
@@ -175,24 +178,23 @@ Dosen Pengampu & : & \DosenPengampu \\
 {[{\Materi}]}}
 \end{center}
 
-\begin{enumerate}[label=\Alph*., leftmargin=*, itemsep=2.0em]
-  \item \phantomsection\addcontentsline{toc}{section}{\Alph{enumi}. Tujuan Percobaan}\textbf{Tujuan Percobaan}
-  \begin{enumerate}[label=\arabic*., leftmargin=2.0em]
-    \item 
-    \item 
-  \end{enumerate}
-
-  \item \phantomsection\addcontentsline{toc}{section}{\Alph{enumi}. Dasar Teori}\textbf{Dasar Teori}
-  {\color{red}(Silakan anda tambahkan teori terkait percobaan unit ini dan cantumkan sumber referensinya
-  pada bagian daftar pustaka.)}
-
-  \item \phantomsection\addcontentsline{toc}{section}{\Alph{enumi}. Hasil dan Pembahasan}\textbf{Hasil dan Pembahasan}
-
-  \item \phantomsection\addcontentsline{toc}{section}{\Alph{enumi}. Kesimpulan}\textbf{Kesimpulan}
-
-  \item \phantomsection\addcontentsline{toc}{section}{\Alph{enumi}. Daftar Pustaka}\textbf{Daftar Pustaka}
-  \nocite{*}
-  \printbibliography[heading=none]
+\section{Tujuan Percobaan}
+\begin{enumerate}
+  \item 
+  \item 
 \end{enumerate}
+
+\section{Dasar Teori}
+{\color{red}
+\par (Silakan anda tambahkan teori terkait percobaan unit ini dan cantumkan sumber referensinya
+pada bagian daftar pustaka.)}
+
+\section{Hasil dan Pembahasan}
+
+\section{Kesimpulan}
+
+\section{Daftar Pustaka}
+\nocite{*}
+\printbibliography[heading=none]
 
 \end{document}
