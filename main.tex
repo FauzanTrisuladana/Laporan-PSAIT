@@ -196,9 +196,18 @@ Dosen Pengampu & : & \DosenPengampu \\
 \end{enumerate}
 
 \section{Dasar Teori}
-{\color{red}
-\par (Silakan anda tambahkan teori terkait percobaan unit ini dan cantumkan sumber referensinya
-pada bagian daftar pustaka.)}
+\subsection{Virtual Machine}
+\par Virtualisasi adalah teknik yang untuk menjalankan satu atau lebih sistem operasi (\textit{guest}) di atas sistem operasi/mesin utama (\textit{host}) dengan memanfaatkan lapisan perangkat lunak bernama \textit{hypervisor}. Hypervisor bertugas mengalokasikan sumber daya seperti CPU, RAM, penyimpanan, dan jaringan ke masing-masing mesin virtual (VM), sehingga beberapa VM dapat berjalan secara terisolasi pada satu komputer fisik \cite{redhat-hypervisor}.
+
+\subsection{VirtualBox}
+\par Oracle VM VirtualBox merupakan perangkat lunak virtualisasi yang berperan sebagai \textit{type-2 hypervisor} (berjalan di atas host OS). Dengan VirtualBox, pengguna dapat membuat VM dengan menentukan spesifikasi (misalnya RAM, jumlah prosesor), media penyimpanan virtual (misalnya VDI), serta memasang berkas ISO sebagai media instalasi sistem operasi \cite{oracle-vbox-manual}.
+
+\par Selain konfigurasi perangkat keras virtual, VirtualBox menyediakan beberapa mode jaringan untuk menghubungkan VM dengan host dan/atau jaringan luar, seperti NAT, Bridged, dan Host-Only. Mode NAT umum dipakai untuk akses internet dari VM, sedangkan Host-Only memungkinkan komunikasi langsung antara host dan VM pada jaringan privat \cite{oracle-vbox-networking}.
+
+\subsection{Ubuntu Server}
+\par Ubuntu Server adalah distribusi Linux yang ditujukan untuk kebutuhan server, seperti penyediaan layanan jaringan, manajemen pengguna, dan administrasi sistem. Ubuntu Server mendukung pengelolaan paket aplikasi melalui APT serta dapat dijalankan secara \textit{headless} (tanpa antarmuka grafis) sehingga cocok untuk lingkungan server \cite{ubuntu-server-docs}.
+
+\par Proses instalasi Ubuntu Server umumnya dilakukan melalui installer berbasis teks (Subiquity) yang memandu pengguna dalam pemilihan bahasa, konfigurasi jaringan, serta penentuan partisi/\textit{storage layout} (misalnya \textit{guided storage}) sampai sistem siap digunakan \cite{ubuntu-server-install}.
 
 \section{Hasil dan Pembahasan}
 \par Pada praktikum kali ini, saya melakukan instalasi Ubuntu Server pada Oracle VM VirtualBox. Proses instalasi berjalan lancar dengan beberapa langkah utama, yaitu:
