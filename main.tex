@@ -42,22 +42,38 @@
   {\normalfont\huge\bfseries\centering}{\chaptertitlename\ \thechapter.}{1em}{}
 
 % Format code Python
-\lstset{
-    language=PHP,
-    basicstyle=\ttfamily\small,
-    keywordstyle=\color{blue}\bfseries,
-    commentstyle=\color{gray},
-    stringstyle=\color{red},
-    numbers=left,
-    numberstyle=\tiny,
-    frame=single,
-    breaklines=true,
-    showstringspaces=false,
-    xleftmargin=2cm,
-    xrightmargin=1cm,
-    captionpos=b,
-    morekeywords={Route,Controller,Request,Response,Blade,Model,Migration,Artisan,middleware,Auth,extends,section,yield,csrf,foreach,endif}
+% --- VS Code-like code style (dark) ---
+\definecolor{vscodeBg}{HTML}{1E1E1E}
+\definecolor{vscodeFg}{HTML}{D4D4D4}
+\definecolor{vscodeKeyword}{HTML}{569CD6}
+\definecolor{vscodeString}{HTML}{CE9178}
+\definecolor{vscodeComment}{HTML}{6A9955}
+\definecolor{vscodeNumber}{HTML}{858585}
+\definecolor{vscodeRule}{HTML}{3C3C3C}
+
+\lstdefinestyle{vscode-dark}{
+  language=PHP,
+  basicstyle=\ttfamily\small\color{vscodeFg},
+  backgroundcolor=\color{vscodeBg},
+  keywordstyle=\color{vscodeKeyword}\bfseries,
+  commentstyle=\color{vscodeComment},
+  stringstyle=\color{vscodeString},
+  numbers=left,
+  numberstyle=\tiny\color{vscodeNumber},
+  frame=single,
+  rulecolor=\color{vscodeRule},
+  breaklines=true,
+  showstringspaces=false,
+  columns=fullflexible,
+  keepspaces=true,
+  tabsize=2,
+  xleftmargin=2cm,
+  xrightmargin=1cm,
+  captionpos=b,
+  morekeywords={Route,Controller,Request,Response,Blade,Model,Migration,Artisan,middleware,Auth,extends,section,yield,csrf,foreach,endif}
 }
+
+\lstset{style=vscode-dark}
 
 % Pengaturan hyperref
 \hypersetup{
@@ -71,7 +87,7 @@
 % Info dokumen
 \newcommand{\Pertemuan}{3}
 \newcommand{\Materi}{Routing dan Controller pada Laravel}
-\title{Laporan Praktikum \\ Praktikum Sistem Administrasi dan Informasi Terdistribusi\\
+\title{Laporan Praktikum \\ Sistem Administrasi dan Informasi Terdistribusi\\
 Pertemuan \Pertemuan\\
 \Materi}
 \newcommand{\NamaMahasiswa}{Muhammad Fauzan Putra Trisuladana}
