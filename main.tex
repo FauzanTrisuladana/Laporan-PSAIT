@@ -234,6 +234,248 @@ Dosen Pengampu & : & \DosenPengampu \\
 % \end{lstlisting}
 
 \section{Hasil dan Pembahasan}
+Praktikum kali ini saya mengikuti langkah-langkah sebagai berikut:
+\begin{enumerate}
+  \item Instalasi Ekstensi Remote SSH di Visual Studio Code
+  \item Konfigurasi Koneksi SSH ke VPS
+  \item Installasi Apache, PHP dan MySQL di Ubuntu Server di VPS
+  \item Persiapan Database 
+  \item Buka folder server di VS Code
+  \item Uji Coba Koneksi dengan Skrip PHP
+\end{enumerate}
+
+\subsection{Instalasi Ekstensi Remote SSH di Visual Studio Code}
+\par Pada bagian ini saya membuka Visual Studio Code, lalu mengakses menu Extensions di bagian sidebar atau (Ctrl+Shift+X) dan mencari ekstensi "Remote - SSH" \ref{fig:remote-ssh-extension} yang dikembangkan oleh Microsoft. Setelah menemukan ekstensi tersebut, saya mengklik tombol "Install" untuk memasangnya di Visual Studio Code. Tunggu proses instalasi dan setelah selesai, ekstensi siap digunakan untuk menghubungkan ke server VPS melalui protokol SSH.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.8\textwidth]{resource/remote-ssh-extension.png}
+  \caption{Tampilan Ekstensi Remote SSH di Visual Studio Code}
+  \label{fig:remote-ssh-extension}
+\end{figure}
+
+\subsection{Konfigurasi Koneksi SSH ke VPS}
+\par Setelah instalasi ekstensi Remote - SSH, saya melakukan konfigurasi koneksi SSH ke server VPS. Dengan menggunakan menu "Remote-SSH: Connect to Host..." \ref{fig:remote-sshmenu} (Ctrl+Shift+P) atau bisa juga meng-klik icon seperti "><" di pokok kiri bawah VS Code \ref{fig:kiribawah}, saya memasukkan alamat IP server VPS dan nama pengguna yang sesuai. Setelah berhasil terhubung, Visual Studio Code akan membuka direktori root dari server VPS.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.5\textwidth]{resource/bawahkiri.png}
+  \caption{Menu untuk membuka koneksi SSH di bawah bagian kiri Visual Studio Code}
+  \label{fig:kiribawah}
+\end{figure}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.8\textwidth]{resource/remote-sshmenu.png}
+  \caption{Tampilan Menu untuk menu "Connect to Host..."}
+  \label{fig:remote-sshmenu}
+\end{figure}
+
+\par Pada gambar \ref{fig:remote-sshmenu} terlihat bahwa ada tombol "Connect to Host..." yang digunakan untuk memulai koneksi SSH ke server VPS.
+
+\par Kemudian saya memasukkan alamat IP server VPS dan nama pengguna yang sesuai untuk menghubungkan ke server. seperti pada gambar \ref{fig:remote-sshconnect}.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.8\textwidth]{resource/remote-sshconnect.png}
+  \caption{Tampilan Menu untuk memasukkan alamat IP dan nama pengguna VPS}
+  \label{fig:remote-sshconnect}
+\end{figure}
+\par Seperti pada gambar \ref{fig:remote-sshconnect}, saya memasukkan alamat IP server VPS kemudian memasukkan nama pengguna dan password untuk menghubungkan ke server VPS. Setelah berhasil terhubung, Visual Studio Code akan membuka direktori root dari server VPS.
+
+\subsection{Instalasi Apache, PHP dan MySQL di Ubuntu Server di VPS}
+\par Setelah berhasil terhubung ke server VPS melalui Visual Studio Code, saya melakukan instalasi Apache, PHP, dan MySQL pada sistem operasi Ubuntu Server. Langkah pertama yang saya lakukan adalah memperbarui daftar paket menggunakan perintah pada Kode \ref{lst:apt-get-update}. Hasil eksekusi perintah tersebut dapat dilihat pada Gambar \ref{fig:apt-get-update}.
+
+\begin{lstlisting}[language=bash, caption={Memperbarui daftar paket dengan apt-get update}, label={lst:apt-get-update}]
+sudo apt-get update
+\end{lstlisting}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.8\textwidth]{resource/apt-get-update.png}
+  \caption{Hasil pembaruan daftar paket menggunakan apt-get update}
+  \label{fig:apt-get-update}
+\end{figure}
+
+\par Setelah daftar paket diperbarui, saya menginstal Apache dengan perintah pada Kode \ref{lst:install-apache2}. Pada percobaan awal, saya sempat salah mengetik opsi \texttt{-y} (karakter tanda minus tidak sesuai) sehingga muncul pesan error seperti pada Gambar \ref{fig:install-apache-error}. Setelah perintah diperbaiki, proses instalasi Apache berhasil seperti pada Gambar \ref{fig:install-apache-success}.
+
+\begin{lstlisting}[language=bash, caption={Menginstal Apache2}, label={lst:install-apache2}]
+sudo apt install apache2 -y
+\end{lstlisting}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.8\textwidth]{resource/install-apache-error.png}
+  \caption{Pesan error saat opsi \texttt{-y} salah dituliskan}
+  \label{fig:install-apache-error}
+\end{figure}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.8\textwidth]{resource/install-apache-success.png}
+  \caption{Proses instalasi Apache2 berhasil}
+  \label{fig:install-apache-success}
+\end{figure}
+
+\par Untuk memastikan layanan Apache sudah berjalan dengan baik, saya memeriksa status service Apache menggunakan perintah pada Kode \ref{lst:apache2-status}. Output status service dapat dilihat pada Gambar \ref{fig:apache-status}.
+
+\begin{lstlisting}[language=bash, caption={Memeriksa status layanan Apache2}, label={lst:apache2-status}]
+sudo systemctl status apache2
+\end{lstlisting}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.8\textwidth]{resource/apache-status.png}
+  \caption{Status layanan Apache2 setelah instalasi}
+  \label{fig:apache-status}
+\end{figure}
+
+\par Selanjutnya saya menginstal PHP beserta modul yang dibutuhkan agar Apache dapat memproses skrip PHP dan terhubung ke MySQL. Perintah instalasi dapat dilihat pada Kode \ref{lst:install-php-modules} dan hasil proses instalasinya ditunjukkan pada Gambar \ref{fig:install-php-modules}.
+
+\begin{lstlisting}[language=bash, caption={Menginstal PHP dan modul yang dibutuhkan}, label={lst:install-php-modules}]
+sudo apt install php libapache2-mod-php php-mysql -y
+\end{lstlisting}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.8\textwidth]{resource/install-php-modules.png}
+  \caption{Proses instalasi PHP dan modul terkait}
+  \label{fig:install-php-modules}
+\end{figure}
+
+\par Setelah instalasi PHP selesai, saya memastikan versi PHP yang terpasang dengan menjalankan perintah pada Kode \ref{lst:php-version}. Output versi PHP dapat dilihat pada Gambar \ref{fig:php-version}.
+
+\begin{lstlisting}[language=bash, caption={Memeriksa versi PHP}, label={lst:php-version}]
+php -v
+\end{lstlisting}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.8\textwidth]{resource/php-version.png}
+  \caption{Hasil pengecekan versi PHP}
+  \label{fig:php-version}
+\end{figure}
+
+\par Langkah berikutnya adalah menginstal MySQL Server menggunakan perintah pada Kode \ref{lst:install-mysql-server}. Proses instalasi MySQL Server ditunjukkan pada Gambar \ref{fig:install-mysql-server}.
+
+\begin{lstlisting}[language=bash, caption={Menginstal MySQL Server}, label={lst:install-mysql-server}]
+sudo apt install mysql-server -y
+\end{lstlisting}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.8\textwidth]{resource/install-mysql-server.png}
+  \caption{Proses instalasi MySQL Server}
+  \label{fig:install-mysql-server}
+\end{figure}
+
+\par Setelah MySQL terinstal, saya masuk ke MySQL Shell untuk memastikan layanan MySQL dapat diakses. Perintah untuk masuk dan keluar dari MySQL Shell ditunjukkan pada Kode \ref{lst:mysql-shell}, dan tampilan MySQL Shell dapat dilihat pada Gambar \ref{fig:mysql-shell}.
+
+\begin{lstlisting}[language=bash, caption={Masuk dan keluar dari MySQL Shell}, label={lst:mysql-shell}]
+sudo mysql
+# kemudian keluar dari MySQL Shell:
+exit
+\end{lstlisting}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.8\textwidth]{resource/mysql-shell.png}
+  \caption{Tampilan MySQL Shell saat berhasil diakses}
+  \label{fig:mysql-shell}
+\end{figure}
+
+\subsection{Persiapan Database}
+\par Setelah memastikan MySQL Server sudah terinstal dan dapat diakses, saya melakukan persiapan database untuk pengujian koneksi antara Apache (PHP) dan MySQL. Saya masuk ke MySQL Shell menggunakan perintah pada Kode \ref{lst:mysql-shell}, lalu membuat database baru seperti pada Kode \ref{lst:create-database}. Setelah itu saya membuat user baru (Kode \ref{lst:create-user}), memberikan hak akses pada database tersebut (Kode \ref{lst:grant-privileges}), kemudian melakukan \textit{reload} hak akses (Kode \ref{lst:flush-privileges}). Rangkaian proses persiapan database dapat dilihat pada Gambar \ref{fig:persiapan-database}.
+
+\begin{lstlisting}[language=SQL, caption={Membuat database baru}, label={lst:create-database}]
+CREATE DATABASE fauzan;
+\end{lstlisting}
+
+\begin{lstlisting}[language=SQL, caption={Membuat user database}, label={lst:create-user}]
+CREATE USER 'fauzan'@'localhost' IDENTIFIED BY 'fauzan123';
+\end{lstlisting}
+
+\begin{lstlisting}[language=SQL, caption={Memberikan hak akses user ke database}, label={lst:grant-privileges}]
+GRANT ALL PRIVILEGES ON fauzan.* TO 'fauzan'@'localhost';
+\end{lstlisting}
+
+\begin{lstlisting}[language=SQL, caption={Menerapkan perubahan hak akses}, label={lst:flush-privileges}]
+FLUSH PRIVILEGES;
+\end{lstlisting}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.8\textwidth]{resource/persiapan-database.png}
+  \caption{Proses persiapan database dan user pada MySQL Shell}
+  \label{fig:persiapan-database}
+\end{figure}
+\par Setelah proses persiapan database selesai, saya keluar dari MySQL Shell dengan perintah \texttt{exit} seperti pada Kode \ref{lst:mysql-shell}.
+
+\subsection{Buka folder server di VS Code}
+
+\par Setelah konfigurasi web server dan database selesai, langkah berikutnya adalah membuka folder web server di Visual Studio Code agar pembuatan file PHP menjadi lebih mudah. Secara default, direktori \texttt{/var/www/html} dimiliki oleh user \texttt{root} dan group \texttt{www-data}, sehingga user biasa tidak bisa menulis file tanpa \texttt{sudo}. Untuk mengatasi hal tersebut, saya menambahkan user saat ini ke group \texttt{www-data}, lalu mengatur kepemilikan dan permission direktori \texttt{/var/www/html} seperti pada Kode \ref{lst:www-data-permission}. Proses eksekusi perintah-perintah tersebut dapat dilihat pada Gambar \ref{fig:www-data-permission}.
+
+\begin{lstlisting}[language=bash, caption={Konfigurasi group dan permission direktori /var/www/html}, label={lst:www-data-permission}]
+sudo usermod -aG www-data $USER
+sudo chown -R $USER:www-data /var/www/html
+sudo chmod -R 775 /var/www/html
+\end{lstlisting}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.8\textwidth]{resource/www-data-permission.png}
+  \caption{Proses konfigurasi group www-data dan permission direktori /var/www/html}
+  \label{fig:www-data-permission}
+\end{figure}
+
+\par Untuk memastikan perubahan group sudah diterapkan, saya menjalankan perintah \texttt{id} seperti pada Kode \ref{lst:check-id}. Jika pada output terdapat group \texttt{www-data}, berarti konfigurasi berhasil. Tampilan hasil pengecekan tersebut dapat dilihat pada Gambar \ref{fig:check-id}. Apabila group \texttt{www-data} belum muncul, maka saya melakukan \textit{re-login} SSH atau menjalankan \texttt{sudo reboot} agar sesi user memuat ulang group.
+
+\begin{lstlisting}[language=bash, caption={Memeriksa group user dengan perintah id}, label={lst:check-id}]
+id
+\end{lstlisting}
+
+\begin{figure}[H]
+  \centering
+  \IfFileExists{resource/check-id.png}{%
+    \includegraphics[width=0.8\textwidth]{resource/check-id.png}%
+  }{}
+  \caption{Hasil pengecekan group user (terdapat www-data)}
+  \label{fig:check-id}
+\end{figure}
+
+\par Setelah permission direktori web sudah sesuai, saya membuka folder web server di VS Code dengan memilih menu \textit{File} $\rightarrow$ \textit{Open Folder}, kemudian memasukkan path \texttt{/var/www/html} dan menekan \textit{OK}. Jika diminta, saya memasukkan password user Ubuntu. Setelah berhasil, File Explorer VS Code menampilkan isi folder server seperti pada Gambar \ref{fig:open-folder-html}.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.8\textwidth]{resource/open-folder-html.png}
+  \caption{Tampilan File Explorer VS Code setelah membuka folder /var/www/html}
+  \label{fig:open-folder-html}
+\end{figure}
+
+\subsection{Uji Coba Koneksi dengan Skrip PHP}
+
+\par Setelah folder \texttt{/var/www/html} berhasil dibuka pada VS Code (Gambar \ref{fig:open-folder-html}), saya membuat sebuah file PHP untuk menguji apakah web server dapat terhubung ke database MySQL yang telah disiapkan pada subbab sebelumnya. File tersebut saya beri nama \texttt{tes\_koneksi.php} dan saya isi dengan skrip koneksi MySQLi seperti pada Kode \ref{lst:tes-koneksi-php}. Pada skrip ini saya menggunakan database \texttt{fauzan} serta user \texttt{fauzan} yang telah diberi hak akses melalui perintah pada Kode \ref{lst:grant-privileges}.
+
+\begin{lstlisting}[language=PHP, caption={Skrip PHP untuk menguji koneksi ke MySQL}, label={lst:tes-koneksi-php}]
+<?php
+$koneksi = mysqli_connect("localhost", "fauzan", "fauzan123", "fauzan");
+
+if ($koneksi) {
+    echo "<h1>Sukses lee!!! Web server terhubung ke database</h1>";
+} else {
+    echo "Gagal bolo: " . mysqli_connect_error();
+}
+?>
+\end{lstlisting}
+
+\par Setelah file berhasil disimpan, saya mengaksesnya melalui browser dengan URL \texttt{http://<IP-VPS>/tes\_koneksi.php}. Jika koneksi berhasil, maka halaman akan menampilkan pesan sukses seperti pada Gambar \ref{fig:tes-koneksi-php}.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.8\textwidth]{resource/tes-koneksi-php.png}
+  \caption{Hasil uji koneksi PHP ke MySQL (tampilan file di VS Code dan output di browser)}
+  \label{fig:tes-koneksi-php}
+\end{figure}
 
 \section{Kesimpulan}
 
