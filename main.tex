@@ -51,6 +51,14 @@
 \definecolor{vscodeNumber}{HTML}{858585}
 \definecolor{vscodeRule}{HTML}{3C3C3C}
 
+\lstdefinelanguage{bash}{
+  keywords={ssh,sudo,nano,service,mysql,exit},
+  sensitive=true,
+  comment=[l]{\#},
+  morestring=[b]",
+  morestring=[b]'
+}
+
 \lstdefinestyle{vscode-dark}{
   language=PHP,
   basicstyle=\ttfamily\small\color{vscodeFg},
@@ -86,8 +94,8 @@
 }
 
 % Info dokumen
-\newcommand{\Pertemuan}{3}
-\newcommand{\Materi}{Routing dan Controller pada Laravel}
+\newcommand{\Pertemuan}{4}
+\newcommand{\Materi}{Instalasi Web Server Dan Database Dalam Mesin (Komputer) Yang Berbeda}
 \title{Laporan Praktikum \\ Sistem Administrasi dan Informasi Terdistribusi\\
 Pertemuan \Pertemuan\\
 \Materi}
@@ -206,8 +214,10 @@ Dosen Pengampu & : & \DosenPengampu \\
 
 \section{Tujuan Praktikum}
 \begin{enumerate}
-  \item 
-  \item 
+  \item Mahasiswa mampu memahami konsep arsitektur sistem terdistribusi sederhana dengan memisahkan Web Server dan Database Server pada mesin yang berbeda.
+  \item Mahasiswa mampu melakukan konfigurasi layanan MySQL pada server Linux agar dapat menerima koneksi dari jaringan luar (modifikasi bind-address).
+  \item Mahasiswa mampu melakukan manajemen user dan hak akses (privileges) MySQL berbasis alamat IP (host-specific) untuk keamanan koneksi.
+  \item Mahasiswa mampu mengimplementasikan koneksi basis data pada skrip PHP yang berjalan di lingkungan Windows (Host) menuju server Linux (Guest).
 \end{enumerate}
 
 \section{Dasar Teori}
@@ -229,6 +239,207 @@ pada bagian daftar pustaka.)}
 % \end{lstlisting}
 
 \section{Hasil dan Pembahasan}
+\par Pada praktikum kali ini, saya akan mengikuti langkah-langkah berikut ini:
+\begin{enumerate}
+  \item Modifikasi MySQL Agar Bisa Diakses dari Luar
+  \item Membuat User Baru pada MySQL yang hanya mengizinkan koneksi dari alamat IP tertentu, dari komputer laboratorium.
+  \item Menghubungkan Website PHP pada Host ke MySQL sekaligus Menampilkan Data dari Database
+\end{enumerate}
+\par Pada praktikum kali ini terdapat kendala berupa kegagalan akses SSH melalui VS Code. Oleh karena itu, saya menggunakan Git Bash untuk terhubung ke server Ubuntu dengan perintah pada Kode~\ref{lst:ssh-login}.
+
+\begin{lstlisting}[style=vscode-dark,language=bash,caption={Mengakses server Ubuntu melalui SSH},label={lst:ssh-login}]
+ssh praktikan@10.33.35.96
+\end{lstlisting}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{resource/ss-03-koneksi-ssh-ke-server.png}
+  \caption{Koneksi SSH ke server Ubuntu menggunakan Git Bash}
+  \label{fig:ssh-login-server}
+\end{figure}
+\par Dari gambar diatas \ref{fig:ssh-login-server}, koneksi ke SSH ke server Ubuntu berhasil dengan menggunakan Git Bash.
+
+\subsection{Modifikasi MySQL Agar Bisa Diakses dari Luar}
+Setelah berhasil masuk ke server, saya mengubah konfigurasi MySQL agar layanan tidak hanya dapat melakukan koneksi dari localhost atau file backend hanya dari server itu saja. File konfigurasi dibuka dengan perintah pada Kode~\ref{lst:edit-mysql-config} dibawah, kemudian nilai \texttt{bind-address} diubah seperti pada Kode~\ref{lst:bind-address}.
+
+\begin{lstlisting}[style=vscode-dark,language=bash,caption={Membuka file konfigurasi MySQL},label={lst:edit-mysql-config}]
+sudo nano /etc/mysql/mysql.conf.d/mysqld.cnf
+\end{lstlisting}
+
+\begin{lstlisting}[style=vscode-dark,caption={Mengubah bind-address agar MySQL dapat diakses dari luar},label={lst:bind-address}]
+bind-address            = 0.0.0.0
+mysqlx-bind-address     = 127.0.0.1
+\end{lstlisting}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.8\textwidth]{resource/ss-04-edit-bind-address-mysql.png}
+  \caption{Perubahan nilai bind-address pada file konfigurasi MySQL}
+  \label{fig:edit-bind-address}
+\end{figure}
+
+\par Berdasarkan Gambar diatas \ref{fig:edit-bind-address}, nilai dari \texttt{bind-address} telah diubah menjadi \texttt{0.0.0.0}. Perubahan ini dilakukan agar MySQL di server dapat menerima koneksi dari luar mesin lokal, sehingga nantinya PHP yang berjalan pada host atau mesin di luar server dapat mengakses database di server Ubuntu.
+
+Setelah perubahan konfigurasi selesai disimpan, saya me-restart layanan MySQL menggunakan perintah pada kode listing \ref{lst:restart-mysql} dibawah agar konfigurasi tadi baru diterapkan.
+
+\begin{lstlisting}[style=vscode-dark,language=bash,caption={Me-restart layanan MySQL setelah perubahan konfigurasi},label={lst:restart-mysql}]
+sudo service mysql restart
+\end{lstlisting}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.78\textwidth]{resource/ss-05-restart-layanan-mysql.png}
+  \caption{Eksekusi perintah restart layanan MySQL pada server}
+  \label{fig:restart-mysql-service}
+\end{figure}
+
+\par Gambar~\ref{fig:restart-mysql-service} diatas itu, menunjukkan bahwa layanan MySQL telah dijalankan ulang setelah file konfigurasi diperbarui. Langkah ini diperlukan agar perubahan pada Kode~\ref{lst:bind-address} diatas tadi benar-benar diterapkan oleh sistem.
+
+\subsection{Membuat User Baru pada MySQL}
+Setelah memastikan MySQL Server sudah dapat menerima koneksi dari luar, saya menyiapkan user yang hanya boleh diakses dari alamat IP host tertentu. Saya terlebih dahulu mengecek alamat IP pada komputer host, kemudian masuk ke MySQL Shell menggunakan perintah pada Kode~\ref{lst:masuk-mysql}. Setelah itu, saya membuat user baru menggunakan perintah pada Kode~\ref{lst:create-user-ip}.
+
+\begin{lstlisting}[style=vscode-dark,language=bash,caption={Masuk ke MySQL Shell dari server Ubuntu},label={lst:masuk-mysql}]
+sudo mysql
+\end{lstlisting}
+
+\begin{lstlisting}[style=vscode-dark,language=SQL,caption={Membuat user MySQL berbasis alamat IP host},label={lst:create-user-ip}]
+CREATE USER 'praktikan_host'@'192.168.56.1' IDENTIFIED BY '123123123';
+\end{lstlisting}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{resource/ss-06-mengecek-ip-host-dan-membuat-user-mysql.png}
+  \caption{Pengecekan alamat IP host dan pembuatan user MySQL berbasis host}
+  \label{fig:cek-ip-dan-create-user}
+\end{figure}
+
+\par Berdasarkan Gambar~\ref{fig:cek-ip-dan-create-user}, alamat IP host berhasil diidentifikasi dan kemudian alamat IP itu digunakan saat membuat user baru di MySQL. Dengan cara ini user akan dibatasi agar hanya dapat melakukan koneksi dari alamat IP tertentu, dalam kasus ini adalah alamat IP dari komputer di laboratorium.
+
+Berikutnya, saya memberikan hak akses penuh kepada user tersebut dengan perintah pada Kode~\ref{lst:grant-user-ip} berikut. Setelah itu, saya menerapkan ulang hak akses menggunakan perintah pada Kode~\ref{lst:flush-privileges} agar perubahan yang saya ubah tersebut aktif.
+
+\begin{lstlisting}[style=vscode-dark,language=SQL,caption={Memberikan hak akses kepada user berbasis host},label={lst:grant-user-ip}]
+GRANT ALL PRIVILEGES ON *.* TO 'praktikan_host'@'192.168.56.1';
+\end{lstlisting}
+
+\begin{lstlisting}[style=vscode-dark,language=SQL,caption={Menerapkan perubahan hak akses MySQL},label={lst:flush-privileges}]
+FLUSH PRIVILEGES;
+EXIT
+\end{lstlisting}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.8\textwidth]{resource/ss-07-memberikan-hak-akses-user-mysql.png}
+  \caption{Pemberian hak akses kepada user MySQL berbasis host}
+  \label{fig:grant-user-ip}
+\end{figure}
+
+\par Terlihat pada gambar~\ref{fig:grant-user-ip} bahwa user yang sebelumnya dibuat telah diberikan hak akses menggunakan perintah \texttt{GRANT}. Dengan hak akses tersebut, user dapat digunakan untuk melakukan koneksi dan pengujian dari komputer host.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.8\textwidth]{resource/ss-08-menerapkan-hak-akses-user-mysql.png}
+  \caption{Penerapan hak akses dan keluar dari MySQL Shell}
+  \label{fig:flush-privileges}
+\end{figure}
+
+\par Dari gambar Gambar~\ref{fig:flush-privileges} terlihat bahwa perubahan hak akses telah diubah dan berhasil diterapkan menggunakan perintah \texttt{FLUSH PRIVILEGES}, kemudian sesi MySQL diakhiri dengan perintah \texttt{EXIT}. Tahap ini bertujuan untuk memastikan seluruh perubahan user dan privilege telah aktif sebelum pengujian koneksi dilakukan dari PHP.
+
+\subsection{Menghubungkan Website PHP ke MySQL}
+Setelah user MySQL berhasil dibuat, saya melakukan pengujian koneksi dari PHP yang berjalan di Windows host ke MySQL di Server. Pada tahap ini saya menyesuaikan kembali host pada user MySQL karena alamat IP yang digunakan untuk koneksi berasal dari jaringan yang berbeda. Saya menghapus user sebelumnya, lalu membuat ulang user dengan host yang sesuai, memberikan hak akses, dan menerapkan perubahan seperti pada Kode~\ref{lst:recreate-user-host}. Setelah itu, saya menyiapkan skrip PHP untuk menguji koneksi menggunakan Kode~\ref{lst:koneksi-php-awal}.
+
+\par Perubahan itu dilakukan karen saya salah melihat alamat IP host yang digunakan untuk koneksi. Alamat IP yang benar adalah \texttt{10.33.34.6}, bukannya \texttt{192.168.56.1}. Oleh karena itu, saya perlu membuat ulang user MySQL dengan host yang benar agar koneksi dari PHP dapat berhasil. Setelah penyesuaian tersebut, saya menulis kode PHP untuk menguji koneksi ke MySQL Server menggunakan kredensial yang sudah disiapkan.
+
+\begin{lstlisting}[style=vscode-dark,language=SQL,caption={Membuat ulang user MySQL dengan host yang sesuai untuk pengujian PHP},label={lst:recreate-user-host}]
+DROP USER 'praktikan_host'@'192.168.56.1';
+CREATE USER 'praktikan_host'@'10.33.34.6' IDENTIFIED BY '123123123';
+GRANT ALL PRIVILEGES ON *.* TO 'praktikan_host'@'10.33.34.6';
+FLUSH PRIVILEGES;
+\end{lstlisting}
+
+\begin{lstlisting}[style=vscode-dark,language=PHP,caption={Kode PHP untuk menguji koneksi ke MySQL Server},label={lst:koneksi-php-awal}]
+<?php
+$koneksi = mysqli_connect("10.33.35.96", "praktikan_host", "123123123", "fauzan");
+
+if ($koneksi) {
+  echo "<h1>Sukses le!!! Berhasil terhubung</h1>";
+} else {
+  echo "Gagal terhubung: " . mysqli_connect_error();
+}
+?>
+\end{lstlisting}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{resource/ss-09-konfigurasi-koneksi-php-dan-user-host.png}
+  \caption{Penyesuaian user host MySQL dan penulisan kode uji koneksi PHP}
+  \label{fig:recreate-user-dan-koneksi-php}
+\end{figure}
+
+\par Gambar~\ref{fig:recreate-user-dan-koneksi-php} menunjukkan saat saya melakukan proses penyesuaian ulang host pada user MySQL sekaligus penulisan kode PHP untuk uji koneksi. Langkah ini dilakukan agar akses dari aplikasi PHP sesuai dengan alamat host yang benar-benar digunakan saat pengujian.
+
+Setelah koneksi antara PHP dan MySQL berhasil disiapkan, saya melakukan persiapan data uji dengan membuat tabel \texttt{mahasiswa} seperti pada Kode~\ref{lst:create-table-mahasiswa} dibawah ini, kemudian saya memasukkan beberapa data seperti pada perintah pada Kode~\ref{lst:insert-data-mahasiswa}.
+
+\begin{lstlisting}[style=vscode-dark,language=SQL,caption={Membuat tabel mahasiswa untuk pengujian data},label={lst:create-table-mahasiswa}]
+CREATE TABLE mahasiswa (
+  nama VARCHAR(100),
+  nim VARCHAR(50)
+);
+\end{lstlisting}
+
+\begin{lstlisting}[style=vscode-dark,language=SQL,caption={Menambahkan data contoh ke tabel mahasiswa},label={lst:insert-data-mahasiswa}]
+INSERT INTO mahasiswa (nama, nim)
+VALUES ('Budi', '19356'), ('Ando', '732837'), ('Hari', '39818');
+\end{lstlisting}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.85\textwidth]{resource/ss-10-membuat-tabel-dan-insert-data.png}
+  \caption{Pembuatan tabel mahasiswa dan penambahan data contoh pada MySQL}
+  \label{fig:create-table-insert-data}
+\end{figure}
+
+\par Berdasarkan Gambar~\ref{fig:create-table-insert-data} diatas, tabel \texttt{mahasiswa} berhasil dibuat dan diisi dengan beberapa data contoh. Data ini kemudian digunakan sebagai bahan pengujian untuk memastikan bahwa aplikasi PHP tidak hanya terhubung ke database, tetapi juga mampu membaca isi tabel dengan benar.
+
+Setelah memastikan data sudah tersedia, saya menambahkan query \texttt{SELECT} pada skrip PHP untuk membaca isi tabel \texttt{mahasiswa} dan menampilkannya dalam bentuk tabel HTML seperti pada Kode~\ref{lst:koneksi-php-final}.
+
+\begin{lstlisting}[style=vscode-dark,language=PHP,caption={Kode PHP final untuk koneksi dan menampilkan data mahasiswa},label={lst:koneksi-php-final}]
+<?php
+$koneksi = mysqli_connect("10.33.35.96", "praktikan_host", "123123123", "fauzan");
+
+if ($koneksi) {
+  echo "<h1>Sukses le!!! Berhasil terhubung</h1>";
+} else {
+  echo "Gagal terhubung: " . mysqli_connect_error();
+}
+
+$sql = "SELECT * FROM mahasiswa";
+$result = mysqli_query($koneksi, $sql);
+
+if (mysqli_num_rows($result) > 0) {
+  echo "<h2>Daftar Mahasiswa</h2>";
+  echo "<table>";
+  echo "<tr><th>Nama</th><th>NIM</th></tr>";
+
+  while ($row = mysqli_fetch_assoc($result)) {
+    echo "<tr>";
+    echo "<td>" . $row['nama'] . "</td>";
+    echo "<td>" . $row['nim'] . "</td>";
+    echo "</tr>";
+  }
+
+  echo "</table>";
+}
+?>
+\end{lstlisting}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{resource/ss-11-hasil-koneksi-php-dan-data-mahasiswa.png}
+  \caption{Hasil pengujian koneksi PHP ke MySQL dan tampilan data mahasiswa}
+  \label{fig:hasil-koneksi-dan-data}
+\end{figure}
+
+\par Gambar~\ref{fig:hasil-koneksi-dan-data} menunjukkan bahwa website PHP berhasil terhubung ke MySQL Server dan dapat menampilkan data mahasiswa yang sebelumnya telah dimasukkan ke dalam database. Dengan hasil tersebut, pengujian koneksi antara web server dan database server pada mesin yang berbeda dapat dinyatakan berhasil.
 
 \section{Kesimpulan}
 
