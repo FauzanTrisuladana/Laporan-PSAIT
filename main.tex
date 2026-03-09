@@ -458,6 +458,11 @@ if (mysqli_num_rows($result) > 0) {
 \par Gambar~\ref{fig:hasil-koneksi-dan-data} menunjukkan bahwa website PHP berhasil terhubung ke MySQL Server dan dapat menampilkan data mahasiswa yang sebelumnya telah dimasukkan ke dalam database. Dengan hasil tersebut, pengujian koneksi antara web server dan database server pada mesin yang berbeda dapat dinyatakan berhasil.
 
 \section{Kesimpulan}
+\par Berdasarkan praktikum yang telah dilakukan, dapat disimpulkan bahwa instalasi web server dan database server pada mesin yang berbeda dapat diimplementasikan dengan baik selama baik dari, konfigurasi jaringan dan layanan, sudah dilakukan secara tepat. Perubahan nilai \texttt{bind-address} pada MySQL memungkinkan database server menerima koneksi dari luar mesin lokal, sehingga komunikasi antar layanan pada dua mesin yang berbeda dapat berjalan.
+
+\par Praktikum ini juga menunjukkan bahwa pengaturan user MySQL berbasis alamat IP host merupakan langkah penting untuk menjaga keamanan akses database. Dengan membuat user yang hanya diizinkan terhubung dari alamat IP tertentu, akses ke database dapat dibatasi sesuai kebutuhan. Selain itu, pemberian hak akses menggunakan perintah \texttt{GRANT} dan penerapan perubahan melalui \texttt{FLUSH PRIVILEGES} memastikan user yang dibuat dapat digunakan untuk proses koneksi secara benar.
+
+\par Hasil akhir pengujian memperlihatkan bahwa aplikasi PHP pada komputer host berhasil terhubung ke MySQL di server dan mampu menampilkan data dari tabel \texttt{mahasiswa}. Dengan demikian, tujuan praktikum untuk memahami konsep pemisahan web server dan database server, melakukan konfigurasi MySQL agar dapat diakses dari jaringan luar, serta menghubungkan PHP ke database pada mesin yang berbeda telah tercapai.
 
 \section{Daftar Pustaka}
 \nocite{*}
