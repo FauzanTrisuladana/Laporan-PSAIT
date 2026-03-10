@@ -206,8 +206,11 @@ Dosen Pengampu & : & \DosenPengampu \\
 
 \section{Tujuan Praktikum}
 \begin{enumerate}
-  \item 
-  \item 
+  \item Mahasiswa mampu memahami arsitektur Client-Server dengan memisahkan sisi Backend (API di Ubuntu Server) dan Frontend (Aplikasi Web di Komputer Host).
+  \item Mahasiswa mampu melakukan deployment kode sumber REST API ke server Linux menggunakan fitur transfer file pada VS Code Remote SSH.
+  \item Mahasiswa mampu melakukan impor database dari file SQL ke dalam server MySQL melalui terminal.
+  \item Mahasiswa mampu melakukan pengujian fungsionalitas dari REST API (GET, POST, DELETE) menggunakan aplikasi Postman.
+  \item Mahasiswa mampu mengintegrasikan aplikasi Frontend berbasis PHP di sisi klien agar dapat berkomunikasi dan bertukar data dengan REST API yang berada di server.
 \end{enumerate}
 
 \section{Dasar Teori}
@@ -229,7 +232,17 @@ pada bagian daftar pustaka.)}
 % \end{lstlisting}
 
 \section{Hasil dan Pembahasan}
-Dengan menggunakan menu "Remote-SSH: Connect to Host..." \ref{fig:remote-sshmenu} (Ctrl+Shift+P) atau bisa juga meng-klik icon seperti "><" di pokok kiri bawah VS Code \ref{fig:kiribawah}, saya memasukkan alamat IP server VPS dan nama pengguna yang sesuai. Setelah berhasil terhubung, Visual Studio Code akan membuka direktori root dari server VPS.
+\par Pada pertemuan ini saya melakukan deployment REST API pada Ubuntu Server, mengimpor database MySQL, menguji endpoint menggunakan Postman, lalu mengintegrasikan aplikasi frontend berbasis PHP agar dapat berkomunikasi dengan REST API yang berjalan di VPS. Langkah-langkah yang saya lakukan meliputi:
+\begin{enumerate}
+  \item Menghubungkan ke server VPS menggunakan SSH melalui Visual Studio Code.
+  \item Melakukan deployment dan transfer file backend REST API ke server menggunakan fitur Remote SSH.
+  \item Mengimpor database dari file SQL ke dalam server MySQL melalui terminal.
+  \item Menguji fungsionalitas REST API menggunakan aplikasi Postman.
+  \item Mengintegrasikan aplikasi frontend berbasis PHP di komputer host dengan REST API pada VPS.
+\end{enumerate}
+
+\subsection{Konfigurasi Koneksi SSH ke VPS}
+\par Langkah pertama yang saya lakukan adalah menghubungkan Visual Studio Code ke VPS menggunakan ekstensi \textit{Remote-SSH}. Saya membuka menu perintah dengan \texttt{Ctrl+Shift+P}, lalu memilih menu \textit{Remote-SSH: Connect to Host...} seperti pada Gambar \ref{fig:remote-sshmenu}. Alternatif lain, menu tersebut juga dapat dibuka melalui ikon koneksi di bagian kiri bawah Visual Studio Code seperti pada Gambar \ref{fig:kiribawah}. Setelah itu saya memasukkan alamat IP server VPS beserta nama pengguna yang diberikan yaitu praktikan, dan password yang sesuai.
 
 \begin{figure}[H]
   \centering
@@ -245,9 +258,7 @@ Dengan menggunakan menu "Remote-SSH: Connect to Host..." \ref{fig:remote-sshmenu
   \label{fig:remote-sshmenu}
 \end{figure}
 
-\par Pada gambar \ref{fig:remote-sshmenu} terlihat bahwa ada tombol "Connect to Host..." yang digunakan untuk memulai koneksi SSH ke server VPS.
-
-\par Kemudian saya memasukkan alamat IP server VPS dan nama pengguna yang sesuai untuk menghubungkan ke server. seperti pada gambar \ref{fig:remote-sshconnect}.
+\par Pada Gambar \ref{fig:remote-sshmenu} terlihat pilihan \textit{Connect to Host...} yang digunakan untuk memulai koneksi SSH ke server. Selanjutnya saya memasukkan alamat IP server VPS dan nama pengguna "praktikan" seperti pada Gambar \ref{fig:remote-sshconnect}.
 
 \begin{figure}[H]
   \centering
@@ -255,9 +266,178 @@ Dengan menggunakan menu "Remote-SSH: Connect to Host..." \ref{fig:remote-sshmenu
   \caption{Tampilan Menu untuk memasukkan alamat IP dan nama pengguna VPS}
   \label{fig:remote-sshconnect}
 \end{figure}
-\par Seperti pada gambar \ref{fig:remote-sshconnect}, saya memasukkan alamat IP server VPS kemudian memasukkan nama pengguna dan password untuk menghubungkan ke server VPS. Setelah berhasil terhubung, Visual Studio Code akan membuka direktori root dari server VPS.
+
+\par Setelah proses autentikasi berhasil, Visual Studio Code membuka folder var/www/html pada server VPS, yang merupakan direktori default untuk web server. Pada folder itu saya masukkan seluruh berkas backend REST API yang sudah diberikan sebelumnya, yaitu file \texttt{config.php}, \texttt{mahasiswa\_api.php}, dan \texttt{mahasiswa.sql}.
+
+\subsection{Deployment Backend REST API dan Impor Database}
+\par Setelah berhasil terhubung ke VPS, saya membuka direktori web server dan memindahkan berkas backend REST API ke dalamnya. Pada Gambar \ref{fig:vscode-import-database-verifikasi} terlihat bahwa folder \texttt{sait\_api} telah berisi file penting seperti \texttt{config.php}, \texttt{mahasiswa\_api.php}, dan \texttt{mahasiswa.sql}. Dari terminal yang sama, saya kemudian mengimpor file SQL ke database MySQL menggunakan perintah pada Kode \ref{lst:mysql-import-saitdb}.
+\par Pada perintah tersebut, saya menggunakan perintah \texttt{mysql} dengan opsi \texttt{-u root -p} untuk masuk sebagai user root, lalu menentukan nama database \texttt{sait\_db}, yang sudah saya buat di pertemuan sebelumnya, dan mengarahkan input dari file SQL yang berada di direktori backend REST API. Setelah menjalankan perintah tersebut, saya memasukkan password MySQL untuk user root agar proses impor dapat berjalan dengan sukses.
+
+\begin{lstlisting}[language=bash, caption={Perintah impor file SQL ke database MySQL}, label={lst:mysql-import-saitdb}]
+sudo mysql -u root -p sait_db < /var/www/html/sait_api/mahasiswa.sql
+\end{lstlisting}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{resource/vscode-import-database-verifikasi.png}
+  \caption{Tampilan file backend REST API di VPS, proses impor database, dan verifikasi data pada MySQL}
+  \label{fig:vscode-import-database-verifikasi}
+\end{figure}
+
+\par Setelah database berhasil diimpor, saya melakukan verifikasi langsung dari MySQL Shell dengan memilih database \texttt{sait\_db} dengan perintah use (nama database) dan seterusnya untuk menampilkan isi tabel \texttt{mahasiswa}, mengecek pengguna aktif, lalu memberikan hak akses kepada user lokal agar aplikasi PHP dapat mengakses database tersebut. Rangkaian perintah verifikasi yang digunakan ditunjukkan pada Kode \ref{lst:mysql-verifikasi-saitdb}.
+
+\begin{lstlisting}[language=SQL, caption={Verifikasi isi database dan pemberian hak akses MySQL}, label={lst:mysql-verifikasi-saitdb}]
+USE sait_db;
+SELECT * FROM mahasiswa;
+SELECT CURRENT_USER();
+GRANT ALL PRIVILEGES ON sait_db.* TO 'fauzan'@'localhost';
+FLUSH PRIVILEGES;
+\end{lstlisting}
+
+\par Berdasarkan Gambar \ref{fig:vscode-import-database-verifikasi}, data awal pada tabel \texttt{mahasiswa} berhasil terbaca dengan empat record, yaitu Andi, Dwi, David, dan Paul. Mohon maaf banyak kesalahan ketik yang saya lakukan karena kurang tanda ";" sehingga ketika di-enter bukan berarti perintah di submit tapi malah membuat baris baru. 
+
+\subsection{Pengujian Fungsionalitas REST API dengan Postman}
+\par Setelah backend dan database siap digunakan, saya melakukan pengujian endpoint REST API menggunakan aplikasi Postman. Endpoint yang diuji semuanya mengarah ke alamat REST API pada VPS, yaitu seperti pada Kode \ref{lst:endpoint-postman-saitdb}.
+
+\begin{lstlisting}[language=bash, caption={Endpoint REST API yang diuji dengan Postman}, label={lst:endpoint-postman-saitdb}]
+GET    http://10.33.35.96/sait_api/mahasiswa_api.php
+POST   http://10.33.35.96/sait_api/mahasiswa_api.php
+POST   http://10.33.35.96/sait_api/mahasiswa_api.php?id_mhs=5
+DELETE http://10.33.35.96/sait_api/mahasiswa_api.php?id_mhs=5
+\end{lstlisting}
+
+\par Pengujian pertama menggunakan method \texttt{GET} untuk menampilkan seluruh data mahasiswa. Hasil respons JSON pada Gambar \ref{fig:postman-get-mahasiswa} menunjukkan bahwa API berhasil mengembalikan status sukses beserta daftar empat data mahasiswa yang sebelumnya telah diimpor ke database.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{resource/postman-get-mahasiswa.png}
+  \caption{Hasil pengujian endpoint GET untuk menampilkan daftar mahasiswa pada Postman}
+  \label{fig:postman-get-mahasiswa}
+\end{figure}
+
+\par Pengujian berikutnya menggunakan method \texttt{POST} untuk menambahkan data baru. Pada percobaan ini saya mengirim data \texttt{nama=Joko} dan \texttt{alamat=Solo} melalui \textit{form-data}. Respons API pada Gambar \ref{fig:postman-post-mahasiswa} menampilkan pesan bahwa data mahasiswa berhasil ditambahkan.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{resource/postman-post-mahasiswa.png}
+  \caption{Hasil pengujian endpoint POST untuk menambahkan data mahasiswa baru}
+  \label{fig:postman-post-mahasiswa}
+\end{figure}
+
+\par Untuk memastikan data benar-benar tersimpan, saya kembali menjalankan endpoint \texttt{GET}. Gambar \ref{fig:postman-get-setelah-tambah} menunjukkan bahwa data baru berhasil masuk ke dalam daftar mahasiswa.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{resource/postman-get-setelah-tambah.png}
+  \caption{Hasil endpoint GET setelah proses penambahan data mahasiswa}
+  \label{fig:postman-get-setelah-tambah}
+\end{figure}
+
+\par Selanjutnya saya melakukan pengujian pembaruan data dengan mengirim method \texttt{POST} ke endpoint yang disertai parameter \texttt{id\_mhs=5}. Data yang dikirim pada percobaan ini adalah \texttt{nama=Fauzan} dan \texttt{alamat=Jogja}. Respons API pada Gambar \ref{fig:postman-update-mahasiswa} menunjukkan bahwa data berhasil diperbarui.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{resource/postman-update-mahasiswa.png}
+  \caption{Hasil pengujian endpoint untuk memperbarui data mahasiswa berdasarkan id mhs}
+  \label{fig:postman-update-mahasiswa}
+\end{figure}
+
+\par Hasil verifikasi setelah proses pembaruan dapat dilihat pada Gambar \ref{fig:postman-get-setelah-update}. Dari respons JSON terlihat bahwa data dengan \texttt{id\_mhs=5} telah berubah sesuai data yang dikirim pada proses \textit{update}.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{resource/postman-get-setelah-update.png}
+  \caption{Hasil endpoint GET setelah proses pembaruan data mahasiswa}
+  \label{fig:postman-get-setelah-update}
+\end{figure}
+
+\par Setelah itu saya menguji proses penghapusan data dengan method \texttt{DELETE} pada endpoint yang disertai parameter \texttt{id\_mhs=5}. Respons pada Gambar \ref{fig:postman-delete-mahasiswa} menampilkan pesan bahwa data mahasiswa berhasil dihapus.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{resource/postman-delete-mahasiswa.png}
+  \caption{Hasil pengujian endpoint DELETE untuk menghapus data mahasiswa}
+  \label{fig:postman-delete-mahasiswa}
+\end{figure}
+
+\par Verifikasi akhir menggunakan endpoint \texttt{GET} ditunjukkan pada Gambar \ref{fig:postman-get-setelah-delete}. Hasil tersebut membuktikan bahwa data yang sebelumnya ditambahkan dan diperbarui telah berhasil dihapus dari database.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{resource/postman-get-setelah-delete.png}
+  \caption{Hasil endpoint GET setelah proses penghapusan data mahasiswa}
+  \label{fig:postman-get-setelah-delete}
+\end{figure}
+
+\subsection{Integrasi Frontend PHP dengan REST API}
+\par Setelah seluruh endpoint REST API berhasil diuji melalui Postman, saya melanjutkan ke tahap integrasi frontend berbasis PHP. Pada tahap ini, seluruh file frontend saya sesuaikan agar menggunakan endpoint REST API yang sama dengan pengujian Postman, yaitu \url{http://10.33.35.96/sait_api/mahasiswa_api.php}. Dengan demikian, aplikasi frontend pada komputer host dapat langsung melakukan operasi \textit{read}, \textit{create}, \textit{update}, dan \textit{delete} ke server VPS.
+
+\par Halaman utama frontend ditampilkan pada Gambar \ref{fig:frontend-dashboard-awal}. Pada halaman ini, data mahasiswa diambil dari REST API dan ditampilkan dalam bentuk tabel. Selain itu, pada bagian bawah halaman juga terdapat integrasi API cuaca yang menampilkan prakiraan suhu kota Berlin yang tidak digunakan.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{resource/frontend-dashboard-awal.png}
+  \caption{Tampilan awal dashboard frontend yang menampilkan data mahasiswa dan data cuaca}
+  \label{fig:frontend-dashboard-awal}
+\end{figure}
+
+\lstinputlisting[caption={Kode halaman index.php untuk menampilkan data mahasiswa dari REST API}, label={lst:frontend-index}]{resource/sait_frontend/index.php}
+
+\par Untuk menambahkan data baru, tersedia halaman \texttt{insert.php}. Pada halaman ini pengguna dapat mengisi nama dan alamat mahasiswa, kemudian data dikirimkan ke REST API menggunakan method \texttt{POST}. Tampilan form tambah data ditunjukkan pada Gambar \ref{fig:frontend-form-tambah} dan implementasi kodenya ditunjukkan pada Kode \ref{lst:frontend-insert}.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.6\textwidth]{resource/frontend-form-tambah.png}
+  \caption{Form frontend untuk menambahkan data mahasiswa baru}
+  \label{fig:frontend-form-tambah}
+\end{figure}
+
+\lstinputlisting[caption={Kode halaman insert.php untuk menambahkan data mahasiswa melalui REST API}, label={lst:frontend-insert}]{resource/sait_frontend/insert.php}
+
+\par Untuk mengubah data yang sudah ada, saya membuat halaman \texttt{update.php}. Halaman ini akan mengambil data mahasiswa berdasarkan parameter \texttt{id\_mhs}, menampilkannya pada form, lalu mengirim perubahan ke REST API. Contoh tampilan halaman edit dapat dilihat pada Gambar \ref{fig:frontend-form-edit}.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.6\textwidth]{resource/frontend-form-edit.png}
+  \caption{Form frontend untuk mengubah data mahasiswa yang dipilih}
+  \label{fig:frontend-form-edit}
+\end{figure}
+
+\lstinputlisting[caption={Kode halaman update.php untuk memperbarui data mahasiswa melalui REST API}, label={lst:frontend-update}]{resource/sait_frontend/update.php}
+
+\par Setelah proses perubahan data dilakukan melalui antarmuka, tabel pada halaman utama frontend akan menampilkan data terbaru seperti pada Gambar \ref{fig:frontend-dashboard-setelah-update}. Hal ini menunjukkan bahwa proses sinkronisasi data antara frontend dan REST API berjalan dengan baik.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{resource/frontend-dashboard-setelah-update.png}
+  \caption{Tampilan dashboard frontend setelah data mahasiswa diperbarui}
+  \label{fig:frontend-dashboard-setelah-update}
+\end{figure}
+
+\par Untuk proses penghapusan data, saya menambahkan halaman \texttt{delete.php} yang dipanggil setelah pengguna menekan tombol hapus dan menyetujui dialog konfirmasi \textit{SweetAlert}. Dialog konfirmasi tersebut ditunjukkan pada Gambar \ref{fig:frontend-konfirmasi-hapus}, sedangkan implementasi proses hapus ditunjukkan pada Kode \ref{lst:frontend-delete}.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{resource/frontend-konfirmasi-hapus.png}
+  \caption{Dialog konfirmasi sebelum proses penghapusan data mahasiswa pada frontend}
+  \label{fig:frontend-konfirmasi-hapus}
+\end{figure}
+
+\lstinputlisting[caption={Kode halaman delete.php untuk menghapus data mahasiswa melalui REST API}, label={lst:frontend-delete}]{resource/sait_frontend/delete.php}
+
+\par Hasil akhir setelah proses penghapusan ditunjukkan pada Gambar \ref{fig:frontend-dashboard-setelah-hapus}. Data yang dipilih sudah tidak lagi muncul pada tabel, sehingga dapat disimpulkan bahwa integrasi operasi \textit{delete} antara frontend dan REST API berhasil dilakukan.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{resource/frontend-dashboard-setelah-hapus.png}
+  \caption{Tampilan dashboard frontend setelah data mahasiswa dihapus}
+  \label{fig:frontend-dashboard-setelah-hapus}
+\end{figure}
 
 \section{Kesimpulan}
+\par Berdasarkan percobaan yang telah saya lakukan, saya berhasil melakukan koneksi ke VPS melalui Visual Studio Code Remote-SSH, melakukan deployment backend REST API ke Ubuntu Server, mengimpor database MySQL, serta memverifikasi bahwa data dapat diakses dengan benar. Pengujian menggunakan Postman juga menunjukkan bahwa endpoint REST API berhasil menjalankan operasi \texttt{GET}, \texttt{POST}, \texttt{update}, dan \texttt{DELETE} sesuai dengan kebutuhan.
+
+\par Selain itu, aplikasi frontend berbasis PHP juga berhasil diintegrasikan dengan REST API pada VPS dengan menggunakan endpoint yang sama seperti pada pengujian Postman. Hal ini dibuktikan melalui kemampuan frontend untuk menampilkan data, menambah data, mengubah data, dan menghapus data mahasiswa secara langsung melalui antarmuka web.
 
 \section{Daftar Pustaka}
 \nocite{*}
