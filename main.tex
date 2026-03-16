@@ -217,22 +217,18 @@ Dosen Pengampu & : & \DosenPengampu \\
 \end{enumerate}
 
 \section{Dasar Teori}
-{\color{red}
-\par (Silakan anda tambahkan teori terkait percobaan unit ini dan cantumkan sumber referensinya
-pada bagian daftar pustaka.)}
+\subsection{REST API}
 
-%contoh gambar dan kode
-% \begin{figure}[H]
-%     \centering
-%     \includegraphics[width=0.5\textwidth]{resource/contoh-gambar.png}
-%     \caption{Contoh Gambar}
-%     \label{fig:contoh-gambar}
-% \end{figure}
+\par REST API atau \textit{Representational State Transfer Application Programming Interface} adalah antarmuka pemrograman aplikasi yang mengikuti prinsip-prinsip arsitektur REST. REST sendiri diperkenalkan oleh Roy Fielding sebagai gaya arsitektur untuk sistem hipermedia terdistribusi, dan kemudian menjadi salah satu pendekatan yang paling banyak digunakan dalam pengembangan layanan web modern \cite{ibm-rest-api,restfulapi-rest}. Pada pendekatan ini, data dan fungsi dipandang sebagai \textit{resource} yang diidentifikasi melalui URI, lalu diakses atau dimanipulasi menggunakan antarmuka yang seragam. Karena sifatnya ringan, fleksibel, dan mudah diintegrasikan dengan berbagai bahasa pemrograman serta format data, REST API banyak digunakan untuk pertukaran data antara frontend, backend, layanan web, maupun database \cite{ibm-rest-api}.
 
-% \begin{lstlisting}[language=php, caption={Contoh Kode Python}, label={lst:contoh-kode}]
-% def hello_world():
-%     print("Hello, World!")
-% \end{lstlisting}
+\par Sebuah REST API yang baik dibangun berdasarkan sejumlah kendala arsitektural utama, yaitu \textit{uniform interface}, \textit{client-server}, \textit{stateless}, \textit{cacheable}, \textit{layered system}, dan \textit{code on demand} sebagai sifat opsional \cite{ibm-rest-api,restfulapi-rest}. Prinsip \textit{client-server} menekankan pemisahan tanggung jawab antara sisi klien dan sisi server, sehingga antarmuka pengguna dapat berkembang secara independen dari logika dan penyimpanan data di server. Sementara itu, sifat \textit{stateless} mengharuskan setiap request membawa seluruh informasi yang dibutuhkan untuk diproses, tanpa bergantung pada sesi yang disimpan di server. Pendekatan ini membuat REST API lebih sederhana, mudah diskalakan, dan lebih cocok digunakan pada arsitektur sistem terdistribusi \cite{ibm-rest-api,restfulapi-rest}.
+
+\par Dalam implementasinya, REST API sangat sering berjalan di atas protokol HTTP, walaupun REST dan HTTP bukanlah hal yang sama \cite{restfulapi-rest}. Pada praktik umum, method HTTP seperti \texttt{GET}, \texttt{POST}, \texttt{PUT}, dan \texttt{DELETE} digunakan untuk mendukung operasi \textit{create}, \textit{read}, \textit{update}, dan \textit{delete} pada resource. Data hasil pertukaran biasanya direpresentasikan dalam format JSON karena mudah dibaca oleh manusia maupun mesin, serta bersifat independen terhadap bahasa pemrograman \cite{ibm-rest-api}. Selain itu, request dan response juga memanfaatkan header, parameter, serta status code HTTP untuk menyampaikan metadata, otorisasi, keberhasilan proses, maupun informasi kesalahan. Oleh karena itu, REST API sangat sesuai digunakan pada praktikum ini karena memudahkan komunikasi antara backend di server VPS dan frontend di komputer host.
+
+\section{Public API}
+\par Public API (sering juga disebut \textit{open API} atau \textit{public web API}) adalah API yang disediakan untuk diakses oleh pihak luar (developer atau aplikasi pihak ketiga) melalui jaringan, umumnya menggunakan protokol HTTP, dengan endpoint serta format request dan response yang telah didefinisikan \cite{ibm-api}. Dengan adanya public API, sebuah organisasi dapat membuat data atau fungsionalitas tertentu tersedia bagi konsumen eksternal tanpa harus mengekspos detail internal sistem secara penuh \cite{ibm-api}.
+
+\par Berdasarkan kebijakan rilisnya, API dapat dibedakan menjadi private/internal API (hanya untuk kebutuhan internal), partner API (hanya untuk mitra tertentu), dan public API (tersedia untuk umum) \cite{redhat-api,postman-what-is-api}. Karena public API ditujukan untuk banyak pengguna, dokumentasi yang komprehensif menjadi sangat penting agar konsumen API memahami endpoint yang tersedia, parameter yang didukung, serta struktur data respons \cite{ibm-api}. Selain itu, public API umumnya menerapkan kontrol akses dan pengelolaan penggunaan (misalnya autentikasi/otorisasi, kuota atau rate limit) untuk menjaga keamanan dan stabilitas layanan \cite{redhat-api}.
 
 \section{Hasil dan Pembahasan}
 \par Pada pertemuan kali ini saya akan menambahkan REST API dari publik (Jikan) untuk menampilkan data top anime pada halaman index.php sebelumnya. Saya akan mengikuti langkah-langkah berikut:
