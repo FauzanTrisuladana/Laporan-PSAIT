@@ -15,6 +15,7 @@
 \usepackage{fancyhdr}           % untuk header/footer
 \usepackage{hyperref}           % untuk link dan bookmark
 \usepackage{listings}           % untuk code Python
+\usepackage{listingsutf8}       % agar \lstinputlisting mendukung UTF-8
 \usepackage{xcolor}             % untuk warna
 \usepackage{float}              % untuk posisi gambar
 \usepackage{tocloft}            % Untuk membuat daftar isi menampilkan "Bab 1. Pendahuluan" instead of "1. Pendahuluan",
@@ -73,7 +74,9 @@
   morekeywords={Route,Controller,Request,Response,Blade,Model,Migration,Artisan,middleware,Auth,extends,section,yield,csrf,foreach,endif}
 }
 
-\lstset{style=vscode-dark}
+\lstset{style=vscode-dark, inputencoding=utf8, extendedchars=true,
+  literate={·}{{.}}1
+}
 
 % Pengaturan hyperref
 \hypersetup{
@@ -232,8 +235,219 @@ pada bagian daftar pustaka.)}
 % \end{lstlisting}
 
 \section{Hasil dan Pembahasan}
+\par Pada pertemuan kali ini saya akan menambahkan REST API dari publik (Jikan) untuk menampilkan data top anime pada halaman index.php sebelumnya. Saya akan mengikuti langkah-langkah berikut:
+\begin{enumerate}
+  \item Mengubah api mahasiswa ke IP address server baru yaitu \url{http://103.139.192.46/a1/6/sait_api/mahasiswa_api.php} karena sekarang menggunakan server vps di luar UGM.
+  \item Membaca dokumentasi API Jikan untuk mengetahui endpoint dan parameter yang dibutuhkan untuk mengambil data top anime.
+  \item Membuat fungsi untuk mengambil data dari API eksternal (Jikan).
+\end{enumerate}
+
+\subsection{Pengubahan Endpoint REST API Mahasiswa}
+\par Setelah backend dan database siap di server baru yang diberikan, saya mengubah endpoint REST API mahasiswa pada frontend agar mengarah ke REST API pada VPS baru. Endpoint yang akan saya ganti menjadi seperti yang ditunjukkan pada Kode \ref{lst:endpoint-restapi-mahasiswa}.
+\begin{lstlisting}[caption={Endpoint REST API mahasiswa yang digunakan}, label={lst:endpoint-restapi-mahasiswa}]
+GET    http://103.139.192.46/a1/6/sait_api/mahasiswa_api.php
+POST   http://103.139.192.46/a1/6/sait_api/mahasiswa_api.php
+POST   http://103.139.192.46/a1/6/sait_api/mahasiswa_api.php?id_mhs=5
+DELETE http://103.139.192.46/a1/6/sait_api/mahasiswa_api.php?id_mhs=5
+\end{lstlisting}
+
+\par Implementasi frontend untuk operasi \textit{create}, \textit{update}, dan \textit{delete} ditunjukkan pada Kode \ref{lst:frontend-insert}, Kode \ref{lst:frontend-update}, dan Kode \ref{lst:frontend-delete}.
+
+\par Untuk menambahkan data baru, tersedia halaman \texttt{insert.php}. Pada halaman ini pengguna dapat mengisi nama dan alamat mahasiswa, kemudian data dikirimkan ke REST API menggunakan method \texttt{POST}. Implementasi kodenya ditunjukkan pada Kode \ref{lst:frontend-insert} dibawah, dapat dilihat bahwa api yang digunakan adalah yang baru.
+\lstinputlisting[caption={Kode halaman \texttt{insert.php} untuk menambahkan data mahasiswa melalui REST API}, label={lst:frontend-insert}]{resource/code/insert.php}
+
+\par Untuk mengubah data yang sudah ada, tersedia halaman \texttt{update.php}. Halaman ini mengambil data mahasiswa berdasarkan parameter \texttt{id\_mhs}, menampilkannya pada form, lalu mengirim perubahan ke REST API. Implementasi kodenya ditunjukkan pada Kode \ref{lst:frontend-update} dibawah ini, terlihat sudah menggunakan Endpoint API yang baru dari VPS yang baru.
+\lstinputlisting[caption={Kode halaman \texttt{update.php} untuk memperbarui data mahasiswa melalui REST API}, label={lst:frontend-update}]{resource/code/update.php}
+
+\par Untuk proses penghapusan data, tersedia halaman \texttt{delete.php} yang dipanggil setelah pengguna menekan tombol hapus dan menyetujui dialog konfirmasi di halaman \texttt{index.php}. Implementasi kodenya ditunjukkan pada Kode \ref{lst:frontend-delete} dibawah ini, dan terlihat dari kode sudah menggunakan Endpoint API yang baru.
+\lstinputlisting[caption={Kode halaman \texttt{delete.php} untuk menghapus data mahasiswa melalui REST API}, label={lst:frontend-delete}]{resource/code/delete.php}
+
+\subsection{Membaca Dokumentasi REST API Publik (Jikan)}
+\par Untuk integrasi API publik, saya menggunakan layanan Jikan (\textit{Unofficial MyAnimeList API}). Saya membaca dokumentasi endpoint \textit{Top Anime} untuk mengetahui parameter yang tersedia (misalnya \texttt{type}, \texttt{filter}, dan \texttt{limit}). Dokumentasi tersebut dapat diakses pada tautan berikut:
+\par \url{https://docs.api.jikan.moe/#/top/gettopanime}
+
+\par Dokumentasi tersebut juga menjelaskan format \textit{return} (respons) dari endpoint Top Anime. Berikut adalah contoh format respons JSON yang dikembalikan oleh endpoint anime:
+\begin{lstlisting}[caption={Contoh format respons JSON endpoint Top Anime (Jikan)}, label={lst:jikan-topanime-response}]
+{
+  "data": [
+    {
+      "mal_id": 0,
+      "url": "string",
+      "images": {
+        "jpg": {
+          "image_url": "string",
+          "small_image_url": "string",
+          "large_image_url": "string"
+        },
+        "webp": {
+          "image_url": "string",
+          "small_image_url": "string",
+          "large_image_url": "string"
+        }
+      },
+      "trailer": {
+        "youtube_id": "string",
+        "url": "string",
+        "embed_url": "string"
+      },
+      "approved": true,
+      "titles": [
+        {
+          "type": "string",
+          "title": "string"
+        }
+      ],
+      "title": "string",
+      "title_english": "string",
+      "title_japanese": "string",
+      "title_synonyms": [
+        "string"
+      ],
+      "type": "TV",
+      "source": "string",
+      "episodes": 0,
+      "status": "Finished Airing",
+      "airing": true,
+      "aired": {
+        "from": "string",
+        "to": "string",
+        "prop": {
+          "from": {
+            "day": 0,
+            "month": 0,
+            "year": 0
+          },
+          "to": {
+            "day": 0,
+            "month": 0,
+            "year": 0
+          },
+          "string": "string"
+        }
+      },
+      "duration": "string",
+      "rating": "G - All Ages",
+      "score": 0.1,
+      "scored_by": 0,
+      "rank": 0,
+      "popularity": 0,
+      "members": 0,
+      "favorites": 0,
+      "synopsis": "string",
+      "background": "string",
+      "season": "summer",
+      "year": 0,
+      "broadcast": {
+        "day": "string",
+        "time": "string",
+        "timezone": "string",
+        "string": "string"
+      },
+      "producers": [
+        {
+          "mal_id": 0,
+          "type": "string",
+          "name": "string",
+          "url": "string"
+        }
+      ],
+      "licensors": [
+        {
+          "mal_id": 0,
+          "type": "string",
+          "name": "string",
+          "url": "string"
+        }
+      ],
+      "studios": [
+        {
+          "mal_id": 0,
+          "type": "string",
+          "name": "string",
+          "url": "string"
+        }
+      ],
+      "genres": [
+        {
+          "mal_id": 0,
+          "type": "string",
+          "name": "string",
+          "url": "string"
+        }
+      ],
+      "explicit_genres": [
+        {
+          "mal_id": 0,
+          "type": "string",
+          "name": "string",
+          "url": "string"
+        }
+      ],
+      "themes": [
+        {
+          "mal_id": 0,
+          "type": "string",
+          "name": "string",
+          "url": "string"
+        }
+      ],
+      "demographics": [
+        {
+          "mal_id": 0,
+          "type": "string",
+          "name": "string",
+          "url": "string"
+        }
+      ]
+    }
+  ],
+  "pagination": {
+    "last_visible_page": 0,
+    "has_next_page": true,
+    "current_page": 0,
+    "items": {
+      "count": 0,
+      "total": 0,
+      "per_page": 0
+    }
+  }
+}
+\end{lstlisting}
+\par Dengan memahami struktur respons JSON tersebut, saya dapat menentukan bagaimana cara menguraikan data yang diterima untuk menampilkan informasi yang relevan pada dashboard frontend terlihat dari kode \ref{lst:frontend-index} dibawah bahwa kolom yang saya gunakan adalah \texttt{title}, \texttt{rank}, \texttt{score}, \texttt{type}, \texttt{episodes}, \texttt{year}, dan \texttt{image\_url}. dan pada halaman itu saya membentuk card untuk setiap anime yang menampilkan informasi tersebut sehingga mudah dilihat seperti pada gambar \ref{fig:hasil-frontend-1} dan \ref{fig:hasil-frontend-2}.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{resource/dokumentasi-jikan-gettopanime.png}
+  \caption{Dokumentasi endpoint \textit{Top Anime} pada Jikan API}
+  \label{fig:dokumentasi-jikan-gettopanime}
+\end{figure}
+
+\subsection{Integrasi Top Anime (Jikan) pada \texttt{index.php}}
+\par Setelah memahami dokumentasi Jikan, saya menggunakan endpoint \url{https://api.jikan.moe/v4/top/anime?limit=12}. Data JSON yang diterima kemudian diuraikan (\textit{parsing}) untuk menampilkan judul, peringkat, skor, tipe, jumlah episode, tahun rilis, dan gambar pada dashboard frontend.
+
+\par Pada halaman utama (\texttt{index.php}), data mahasiswa tetap diambil dari REST API, dan pada bagian bawah halaman ditambahkan integrasi API publik Jikan untuk menampilkan daftar \textit{Top Anime}.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{resource/hasil-frontend-1.png}
+  \caption{Tampilan dashboard frontend: daftar mahasiswa dan Top Anime (Jikan)}
+  \label{fig:hasil-frontend-1}
+\end{figure}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{resource/hasil-frontend-2.png}
+  \caption{Tampilan lanjutan daftar Top Anime pada dashboard frontend}
+  \label{fig:hasil-frontend-2}
+\end{figure}
+
+\par Implementasi pengambilan data mahasiswa dan integrasi Top Anime Jikan terdapat pada Kode \ref{lst:frontend-index}.
+\lstinputlisting[caption={Kode halaman \texttt{index.php} untuk menampilkan data mahasiswa dari REST API dan Top Anime dari Jikan}, label={lst:frontend-index}]{resource/code/index.php}
 
 \section{Kesimpulan}
+\par Berdasarkan tujuan praktikum dan percobaan pada pertemuan ini, saya berhasil memahami konsep External API (Public API) serta cara mengintegrasikannya bersama Local APi (yang saya hosting di vps baru) (REST API mahasiswa) pada satu aplikasi frontend di laptop saya.
+
+\par Selain itu, saya berhasil membaca dokumentasi teknis Jikan API untuk menentukan endpoint dan parameter yang digunakan, kemudian mengimplementasikan HTTP request pada PHP menggunakan \texttt{file\_get\_contents} untuk mengambil data Top Anime. Data JSON yang diterima berhasil diuraikan (parsing) menjadi struktur Array/Object dan ditampilkan pada dashboard dalam bentuk kartu anime yang memuat informasi relevan seperti \texttt{title}, \texttt{rank}, \texttt{score}, \texttt{type}, \texttt{episodes}, \texttt{year}, dan \texttt{image\_url}. Dengan demikian, data dari dua sumber berbeda (REST API mahasiswa dan API publik Jikan) dapat disajikan dalam satu tampilan yang terintegrasi.
 
 \section{Daftar Pustaka}
 \printbibliography[heading=none]
