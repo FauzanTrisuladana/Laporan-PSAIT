@@ -121,7 +121,7 @@ Pertemuan \Pertemuan\\
 \begin{minipage}{0.8\textwidth}
 \raggedright
 \begin{large}
-\begin{tabular}{@{}l@{\hspace{1.5em}}c@{\hspace{1.5em}}p{\textwidth}@{}}
+\begin{tabular}{@{}l@{\hspace{1.5em}}c@{\hspace{1.5em}}p{0.55\linewidth}@{}}
 Nama & : & \NamaMahasiswa \\
 NIM & : & \NIMMahasiswa \\
 Kelas & : & \KelasMahasiswa \\
@@ -208,12 +208,21 @@ Dosen Pengampu & : & \DosenPengampu \\
 \section{Tujuan Praktikum}
 \begin{enumerate}
   \item Mahasiswa mampu melakukan replikasi database menggunakan MySQL.
-  \item Dapat menyelesaikan kasus tidak terreplikanya database yang sudah ada sebelum replika 
+  \item Dapat menyelesaikan kasus tidak terreplikanya database yang sudah ada sebelum replikasi dijalankan.
 \end{enumerate}
 
 \section{Dasar Teori}
 \subsection{MySQL}
+
+\par MySQL adalah sistem manajemen basis data relasional (RDBMS) yang menggunakan Structured Query Language (SQL) untuk melakukan definisi skema, manipulasi data, dan query. MySQL menerapkan arsitektur client--server, di mana proses server (\texttt{mysqld}) menyimpan serta mengelola data, sedangkan klien (misalnya \texttt{mysql}) digunakan untuk terhubung dan mengeksekusi perintah SQL. Dalam praktik pengembangan aplikasi, MySQL banyak dipakai karena performanya baik, dukungan ekosistem luas, serta ketersediaan dokumentasi yang lengkap \cite{mysql-refman}.
+
+\par Pada sisi administrasi sistem, konfigurasi MySQL umumnya dilakukan melalui berkas konfigurasi (misalnya \texttt{mysqld.cnf} di Linux atau \texttt{my.ini} di Windows) untuk mengatur parameter layanan seperti port, direktori data, serta kebijakan akses jaringan melalui \texttt{bind-address}. Selain itu, MySQL memiliki mekanisme autentikasi dan hak akses (privileges) untuk memastikan hanya user tertentu yang dapat mengakses database sesuai perannya \cite{mysql-refman}.
+
 \subsection{Replika}
+
+\par Replikasi database MySQL adalah mekanisme penyalinan perubahan data dari server sumber (source/master) ke server replika (replica/slave) secara otomatis. Pada replikasi berbasis binary log, setiap perubahan pada source dicatat sebagai event pada binary log, lalu replica membaca event tersebut dan mengeksekusinya sehingga data tetap konsisten. Konsep ini sering dimanfaatkan untuk kebutuhan redundansi (cadangan), distribusi beban baca (read scaling), serta pemulihan ketika terjadi kegagalan pada server utama \cite{mysql-replication,mysql-binary-log}.
+
+\par Secara umum, replikasi memerlukan beberapa prasyarat: source harus mengaktifkan binary log (\texttt{log\_bin}) dan setiap server harus memiliki \texttt{server-id} yang unik. Replica kemudian dikonfigurasi untuk terhubung ke source menggunakan koordinat replikasi (misalnya \textit{file/position} dari \texttt{SHOW MASTER STATUS}) dan kredensial user replikasi. Pada MySQL 8, konfigurasi dapat dilakukan menggunakan perintah \texttt{CHANGE REPLICATION SOURCE TO} (atau \texttt{CHANGE MASTER TO} pada istilah lama), lalu replikasi dijalankan dengan \texttt{START REPLICA/SLAVE} dan dipantau melalui \texttt{SHOW REPLICA/SLAVE STATUS} \cite{mysql-replication,mysql-change-replication-source-to}.
 
 \section{Hasil dan Pembahasan}
 
@@ -312,7 +321,7 @@ mysql -u root -P 3333
 \begin{figure}[H]
   \centering
   \includegraphics[width=0.95\textwidth]{resource/Pertemuan 6/7.png}
-  \caption{Verifikasi koneksi dan versi MySQL pada Windows Slave (contoh \texttt{SELECT @@version})}
+  \caption{Verifikasi koneksi dan versi MySQL pada Windows Slave}
   \label{fig:p6-07-slave-check-version}
 \end{figure}
 
@@ -340,7 +349,7 @@ log_bin = /var/log/mysql/mysql-bin.log
 \begin{figure}[H]
   \centering
   \includegraphics[width=0.95\textwidth]{resource/Pertemuan 6/8.png}
-  \caption{Mengaktifkan \texttt{bind-address}, \texttt{server-id}, dan \texttt{log\_bin} pada MySQL Master (Ubuntu)}
+  \caption{Aktivasi parameter replikasi pada MySQL Master (Ubuntu)}
   \label{fig:p6-08-edit-mysqldcnf}
 \end{figure}
 
@@ -362,7 +371,7 @@ GRANT REPLICATION SLAVE ON *.* TO 'replica_user'@'%';
 FLUSH PRIVILEGES;
 \end{lstlisting}
 
-\par Dengan host \texttt{\%}, user \texttt{replica\_user} diizinkan login dari IP manapun, sehingga koneksi Slave dapat diterima. Pada implementasi produksi, host sebaiknya dibatasi ke IP Slave untuk meningkatkan keamanan.
+\par Dengan host \texttt{\%}, akun replikasi dapat login dari IP mana pun sehingga koneksi dari Slave bisa diterima. Untuk implementasi produksi, host sebaiknya dibatasi ke IP Slave agar lebih aman.
 
 \begin{figure}[H]
   \centering
@@ -461,7 +470,7 @@ SHOW DATABASES;
 \par Penyebab utama \texttt{sait\_db} tidak ikut muncul di Slave adalah karena replikasi MySQL berbasis \textit{binary log} hanya mengirimkan \textit{perubahan} setelah Slave mulai membaca dari posisi tertentu (\texttt{MASTER\_LOG\_FILE} dan \texttt{MASTER\_LOG\_POS}). Jika \texttt{sait\_db} sudah ada dan sudah terisi data \textbf{sebelum} proses replikasi dimulai, maka event \texttt{CREATE DATABASE} dan data awalnya tidak lagi dikirim ke Slave (karena event tersebut berada \textit{sebelum} posisi replikasi yang digunakan). Akibatnya, database tersebut tidak otomatis tersalin ke Slave.
 
 \par Hal ini terlihat dari cuplikan dump SQL \texttt{all.sql} (hasil \textit{backup}) yang memuat pembuatan database \texttt{sait\_db} dan data tabel \texttt{mahasiswa}. Agar dokumen tidak terlalu panjang, saya menampilkan cuplikan kecil yang diambil dari \texttt{all.sql} pada Kode \ref{lst:allsql-saitdb-excerpt}.
-\lstinputlisting[caption={Cuplikan dump (diambil dari \texttt{all.sql}) yang memuat database \texttt{sait\_db} dan \texttt{uji\_coba}}, label={lst:allsql-saitdb-excerpt}]{resource/all-saitdb-excerpt.sql}
+\lstinputlisting[caption={Cuplikan dump SQL yang memuat database \texttt{sait\_db}}, label={lst:allsql-saitdb-excerpt}]{resource/all-saitdb-excerpt.sql}
 
 \subsection{Solusi: Menyalin \texttt{sait\_db} ke Slave dan Menjaga Replikasi Tetap Berjalan}
 \par Solusi yang dilakukan agar \texttt{sait\_db} ikut ada di Slave dan selanjutnya ikut tereplikasi ketika ada penambahan data adalah melakukan \textit{sinkronisasi awal} (\textit{initial seeding}) database tersebut dari Master ke Slave. Secara umum terdapat dua pendekatan:
@@ -476,7 +485,7 @@ SHOW DATABASES;
   \item \textbf{(Master/Ubuntu)} Buat dump database \texttt{sait\_db}: \texttt{mysqldump --databases sait\_db > sait\_db.sql} (atau gunakan \texttt{all.sql} yang sudah dibuat).
   \item \textbf{(Transfer)} Pindahkan file dump (\texttt{sait\_db.sql} atau \texttt{all.sql}) ke komputer Slave.
   \item \textbf{(Slave/Windows)} Import dump ke MySQL Slave melalui command prompt (bukan di dalam MySQL CLI) dan pastikan port sesuai, misalnya \texttt{-P 3333}.
-  \item \textbf{(Slave/Windows)} Jalankan kembali replikasi dan cek status hingga \texttt{Slave\_IO\_Running=Yes} dan \texttt{Slave\_SQL\_Running=Yes}.
+  \item \textbf{(Slave/Windows)} Jalankan kembali replikasi, lalu cek status replikasi sampai proses I/O dan SQL berjalan (running) dan tidak ada error.
   \item \textbf{(Uji)} Tambahkan data baru pada \texttt{sait\_db} di Master (misal insert ke tabel \texttt{mahasiswa}) lalu verifikasi data tersebut muncul di Slave.
 \end{enumerate}
 
@@ -514,6 +523,12 @@ SHOW SLAVE STATUS\G
 \par Setelah proses \textit{initial seeding} selesai, database \texttt{sait\_db} akan muncul di Slave dan perubahan berikutnya (INSERT/UPDATE/DELETE) pada \texttt{sait\_db} di Master akan ikut terekam di binary log serta diterapkan pada Slave.
 
 \section{Kesimpulan}
+
+\par Kesimpulan dari praktikum replikasi database MySQL adalah sebagai berikut:
+\begin{enumerate}
+  \item Replikasi database menggunakan MySQL antara Master (Ubuntu Server) dan Slave (Windows) berhasil dikonfigurasi dan dijalankan. Hal ini dibuktikan dengan database yang dibuat di Master serta perubahan data yang dilakukan dapat muncul dan sinkron di Slave setelah replikasi aktif.
+  \item Kasus tidak tereplikanya database yang sudah ada sebelum replikasi dijalankan terjadi karena mekanisme replikasi berbasis binary log hanya menerapkan event setelah posisi log tertentu (\textit{file/position}) yang dijadikan titik awal. Solusinya adalah melakukan \textit{initial seeding} dengan menyalin data awal (misalnya melalui \texttt{mysqldump} dan import) ke Slave, lalu menjalankan kembali replikasi agar perubahan berikutnya tetap tersalin otomatis, termasuk pada database \texttt{sait\_db}.
+\end{enumerate}
 
 \section{Daftar Pustaka}
 \printbibliography[heading=none]
