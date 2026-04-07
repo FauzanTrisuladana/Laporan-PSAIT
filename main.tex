@@ -207,29 +207,311 @@ Dosen Pengampu & : & \DosenPengampu \\
 
 \section{Tujuan Praktikum}
 \begin{enumerate}
-  \item 
-  \item 
+  \item Mahasiswa mampu melakukan replikasi database menggunakan MySQL.
+  \item Dapat menyelesaikan kasus tidak terreplikanya database yang sudah ada sebelum replika 
 \end{enumerate}
 
 \section{Dasar Teori}
-{\color{red}
-\par (Silakan anda tambahkan teori terkait percobaan unit ini dan cantumkan sumber referensinya
-pada bagian daftar pustaka.)}
-
-%contoh gambar dan kode
-% \begin{figure}[H]
-%     \centering
-%     \includegraphics[width=0.5\textwidth]{resource/contoh-gambar.png}
-%     \caption{Contoh Gambar}
-%     \label{fig:contoh-gambar}
-% \end{figure}
-
-% \begin{lstlisting}[language=php, caption={Contoh Kode Python}, label={lst:contoh-kode}]
-% def hello_world():
-%     print("Hello, World!")
-% \end{lstlisting}
+\subsection{MySQL}
+\subsection{Replika}
 
 \section{Hasil dan Pembahasan}
+
+\par Pada pertemuan kali ini saya melakukan konfigurasi replikasi database MySQL antara Ubuntu Server sebagai \textit{Master} dan komputer Windows sebagai \textit{Slave}. Replikasi digunakan agar perubahan data pada database di Master dapat disalin secara otomatis ke database di Slave sebagai cadangan (\textit{redundancy}) dan untuk kebutuhan uji coba.
+
+\par Secara ringkas, langkah-langkah yang saya lakukan adalah sebagai berikut:
+\begin{enumerate}
+  \item Menyiapkan MySQL Community Server (portable ZIP) pada komputer Slave (Windows) beserta file konfigurasi \texttt{my.ini}.
+  \item Mengaktifkan pengaturan replikasi pada MySQL Master (Ubuntu Server) dengan mengubah \texttt{bind-address}, \texttt{server-id}, dan \texttt{log\_bin}.
+  \item Membuat user khusus replikasi di Master dan memberikan privilege \texttt{REPLICATION SLAVE}.
+  \item Mengambil posisi \textit{binary log} di Master (\texttt{MASTER\_LOG\_FILE} dan \texttt{MASTER\_LOG\_POS}) untuk acuan konfigurasi Slave.
+  \item Menghubungkan Slave ke Master menggunakan perintah \texttt{CHANGE MASTER TO} lalu menjalankan replikasi dan memverifikasi statusnya.
+  \item Menguji replikasi dengan membuat database baru di Master dan memastikan database tersebut muncul di Slave.
+  \item Menganalisis perbedaan jumlah database (Master memiliki 6 database sedangkan Slave 5 database) dan menerapkan solusi agar database \texttt{sait\_db} ikut tersalin dan tetap tereplikasi.
+  \item Menjelaskan implementasi backend (\texttt{resource/new}) dan frontend (\texttt{resource/fe\_new}) yang digunakan sebagai aplikasi uji (\textit{CRUD}) pada database.
+\end{enumerate}
+
+\par Pengecekan awal yang saya lakukan pada Ubuntu Server (Master) adalah memastikan versi MySQL yang terpasang. Hasilnya ditunjukkan pada Gambar \ref{fig:p6-01-mysql-version-master}.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{resource/Pertemuan 6/1.png}
+  \caption{Pengecekan versi MySQL pada Ubuntu Server (Master)}
+  \label{fig:p6-01-mysql-version-master}
+\end{figure}
+
+\subsection{Menyiapkan MySQL pada Komputer Slave (Windows)}
+\par Pada sisi komputer (Windows) saya menggunakan MySQL Community Server versi ZIP (portable). Berbeda dengan Ubuntu yang dapat dijalankan sebagai service, pada Windows portable MySQL dijalankan melalui command prompt dan memerlukan file konfigurasi \texttt{my.ini} agar port dan folder data terset dengan benar.
+
+\par Konfigurasi dasar yang saya gunakan pada \texttt{my.ini} mencakup port non-standar (\texttt{3333}) serta lokasi \texttt{basedir} dan \texttt{datadir}. Setelah itu (sebelum replikasi) saya menambahkan \texttt{server-id=2} agar unik (berbeda dengan Master). Contoh struktur konfigurasi dapat dilihat pada Kode \ref{lst:myini-slave}.
+\begin{lstlisting}[caption={Contoh konfigurasi \texttt{my.ini} pada MySQL Slave (Windows)}, label={lst:myini-slave}]
+[mysqld]
+port=3333
+
+# Sesuaikan path dengan folder hasil ekstrak MySQL di komputer masing-masing
+# Gunakan garis miring (/) agar aman
+basedir=D:/path/to/mysql-8.0.xx-winx64
+datadir=D:/path/to/mysql-8.0.xx-winx64/data
+
+server-id=2
+
+# Optional: untuk mengurangi beban (hanya untuk simulasi)
+innodb_buffer_pool_size = 64M
+performance_schema = 0
+mysqlx = 0
+max_connections = 20
+\end{lstlisting}
+
+\par Setelah konfigurasi dibuat, proses yang saya lakukan pada Windows adalah melakukan inisialisasi direktori data, menjalankan server MySQL, dan masuk ke MySQL CLI dengan port \texttt{3333}. Perintah yang digunakan ditunjukkan pada Kode \ref{lst:cmd-windows-mysql}.
+\begin{lstlisting}[caption={Inisialisasi dan menjalankan MySQL portable pada Windows (Slave)}, label={lst:cmd-windows-mysql}]
+cd D:\path\to\mysql-8.0.xx-winx64\bin
+
+mysqld --defaults-file=my.ini --initialize-insecure --console
+mysqld --console
+
+mysql -u root -P 3333
+\end{lstlisting}
+
+\par Dokumentasi pelaksanaan di sisi Windows (Slave) ditunjukkan pada Gambar \ref{fig:p6-02-download-mysql} sampai dengan Gambar \ref{fig:p6-07-slave-check-version}.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{resource/Pertemuan 6/2.png}
+  \caption{Download MySQL Community Server (Windows ZIP) pada komputer Slave}
+  \label{fig:p6-02-download-mysql}
+\end{figure}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{resource/Pertemuan 6/3.png}
+  \caption{Ekstraksi MySQL ZIP dan pembuatan konfigurasi awal \texttt{my.ini} (port, \texttt{basedir}, \texttt{datadir})}
+  \label{fig:p6-03-extract-myini}
+\end{figure}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{resource/Pertemuan 6/4.png}
+  \caption{Inisialisasi direktori data MySQL portable menggunakan \texttt{--initialize-insecure}}
+  \label{fig:p6-04-init-slave}
+\end{figure}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{resource/Pertemuan 6/5.png}
+  \caption{Menjalankan \texttt{mysqld} portable dan memastikan server aktif pada port \texttt{3333}}
+  \label{fig:p6-05-run-mysqld}
+\end{figure}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{resource/Pertemuan 6/6.png}
+  \caption{Masuk ke MySQL CLI pada Windows Slave melalui port \texttt{3333}}
+  \label{fig:p6-06-mysql-cli-slave}
+\end{figure}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{resource/Pertemuan 6/7.png}
+  \caption{Verifikasi koneksi dan versi MySQL pada Windows Slave (contoh \texttt{SELECT @@version})}
+  \label{fig:p6-07-slave-check-version}
+\end{figure}
+
+\subsection{Mengonfigurasi MySQL Master (Ubuntu Server)}
+\par Pada sisi server (Ubuntu) saya mengubah konfigurasi MySQL agar dapat diakses dari jaringan (tidak hanya \textit{localhost}) dan mengaktifkan \textit{binary log} sebagai syarat replikasi. File konfigurasi yang diubah adalah \texttt{/etc/mysql/mysql.conf.d/mysqld.cnf}.
+
+\par Perintah untuk mengedit konfigurasi dan melakukan restart service ditunjukkan pada Kode \ref{lst:cmd-ubuntu-config-master}.
+\begin{lstlisting}[caption={Mengedit konfigurasi MySQL Master (Ubuntu Server)}, label={lst:cmd-ubuntu-config-master}]
+sudo nano /etc/mysql/mysql.conf.d/mysqld.cnf
+sudo systemctl restart mysql
+\end{lstlisting}
+
+\par Bagian konfigurasi yang menjadi kunci pada Master adalah \texttt{bind-address=0.0.0.0} (agar bisa menerima koneksi dari luar), \texttt{server-id=1} (identitas Master), dan \texttt{log\_bin} (aktifkan binary logging). Cuplikan konfigurasi ditunjukkan pada Kode \ref{lst:mysqldcnf-master}.
+\begin{lstlisting}[caption={Cuplikan konfigurasi penting \texttt{mysqld.cnf} pada Master}, label={lst:mysqldcnf-master}]
+# Akses jaringan
+bind-address = 0.0.0.0
+
+# Identitas server untuk replikasi
+server-id = 1
+
+# Aktifkan binary log
+log_bin = /var/log/mysql/mysql-bin.log
+\end{lstlisting}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{resource/Pertemuan 6/8.png}
+  \caption{Mengaktifkan \texttt{bind-address}, \texttt{server-id}, dan \texttt{log\_bin} pada MySQL Master (Ubuntu)}
+  \label{fig:p6-08-edit-mysqldcnf}
+\end{figure}
+
+\subsection{Memverifikasi Database pada Master}
+\par Sebelum konfigurasi replikasi dijalankan, saya memastikan database aplikasi yang digunakan untuk uji (misalnya \texttt{koperasi}) sudah ada beserta tabel dan datanya. Verifikasi dilakukan dengan \texttt{SHOW DATABASES}, \texttt{SHOW TABLES}, dan query sederhana pada tabel \texttt{anggota}. Hasil verifikasi ditunjukkan pada Gambar \ref{fig:p6-09-master-verify-db}.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{resource/Pertemuan 6/9.png}
+  \caption{Verifikasi database dan data pada Master (contoh \texttt{koperasi} dan tabel \texttt{anggota})}
+  \label{fig:p6-09-master-verify-db}
+\end{figure}
+
+\subsection{Membuat User Replikasi di Master}
+\par Agar MySQL Slave dapat mengambil data dari Master, saya membuat user khusus replikasi dan memberikan hak akses \texttt{REPLICATION SLAVE}. Pembuatan user dilakukan di MySQL CLI pada Ubuntu Server. Perintah SQL yang digunakan ditunjukkan pada Kode \ref{lst:sql-create-repl-user}.
+\begin{lstlisting}[caption={Membuat user replikasi pada Master dan memberikan privilege}, label={lst:sql-create-repl-user}]
+CREATE USER 'replica_user'@'%' IDENTIFIED WITH mysql_native_password BY 'abc';
+GRANT REPLICATION SLAVE ON *.* TO 'replica_user'@'%';
+FLUSH PRIVILEGES;
+\end{lstlisting}
+
+\par Dengan host \texttt{\%}, user \texttt{replica\_user} diizinkan login dari IP manapun, sehingga koneksi Slave dapat diterima. Pada implementasi produksi, host sebaiknya dibatasi ke IP Slave untuk meningkatkan keamanan.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{resource/Pertemuan 6/10.png}
+  \caption{Pembuatan user \texttt{replica\_user} dan pemberian privilege replikasi pada Master}
+  \label{fig:p6-10-create-repl-user}
+\end{figure}
+
+\subsection{Melengkapi Konfigurasi Slave (\texttt{server-id})}
+\par Setelah sisi Master siap, saya melengkapi konfigurasi pada MySQL Slave dengan menambahkan \texttt{server-id=2} pada \texttt{my.ini}. Nilai \texttt{server-id} harus unik antar server agar replikasi dapat membedakan asal event. Bukti penambahan \texttt{server-id} ditunjukkan pada Gambar \ref{fig:p6-11-slave-server-id}.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{resource/Pertemuan 6/11.png}
+  \caption{Penambahan \texttt{server-id=2} pada \texttt{my.ini} (MySQL Slave)}
+  \label{fig:p6-11-slave-server-id}
+\end{figure}
+
+\par Setelah konfigurasi diubah, server MySQL portable perlu dijalankan ulang. Pada praktiknya saya sempat mencoba menjalankan \texttt{--initialize-insecure} kembali pada direktori data yang sudah pernah diinisialisasi sehingga muncul error bahwa \texttt{datadir} tidak dapat digunakan. Solusinya adalah tidak mengulang inisialisasi jika data directory sudah ada (cukup jalankan \texttt{mysqld}), atau mengosongkan \texttt{datadir} terlebih dahulu bila memang ingin inisialisasi ulang. Contoh output proses tersebut ditunjukkan pada Gambar \ref{fig:p6-12-slave-mysqld-output}.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{resource/Pertemuan 6/12.png}
+  \caption{Menjalankan ulang \texttt{mysqld} pada Slave dan contoh error saat \texttt{datadir} sudah terinisialisasi}
+  \label{fig:p6-12-slave-mysqld-output}
+\end{figure}
+
+\subsection{Mengecek Posisi Master (\texttt{MASTER\_LOG\_FILE} dan \texttt{MASTER\_LOG\_POS})}
+\par Setelah konfigurasi replikasi aktif, saya mengecek posisi \textit{binary log} pada Master dengan perintah \texttt{SHOW MASTER STATUS\textbackslash G}. Informasi ini dibutuhkan agar Slave mulai menarik perubahan dari titik yang konsisten.
+
+\par Pada saat menjalankan perintah ini, perlu diperhatikan bahwa mode tampilan vertikal menggunakan \texttt{\textbackslash G} harus ditulis menempel pada perintah (tanpa spasi), misalnya \texttt{STATUS\textbackslash G}. Hasil pengecekan posisi Master ditunjukkan pada Gambar \ref{fig:p6-13-master-status}.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{resource/Pertemuan 6/13.png}
+  \caption{Mengecek posisi MySQL Master menggunakan \texttt{SHOW MASTER STATUS\textbackslash G}}
+  \label{fig:p6-13-master-status}
+\end{figure}
+
+\subsection{Menghubungkan Slave ke Master dan Menjalankan Replikasi}
+\par Pada sisi komputer Slave (Windows), saya menghubungkan MySQL Slave ke Master menggunakan perintah \texttt{CHANGE MASTER TO} dengan parameter host Master, user replikasi, serta nilai \texttt{MASTER\_LOG\_FILE} dan \texttt{MASTER\_LOG\_POS} yang didapatkan dari langkah sebelumnya.
+
+\par Konfigurasi koneksi replikasi di MySQL Slave ditunjukkan pada Kode \ref{lst:sql-change-master}. Pada praktik ini, Master menggunakan port default \texttt{3306}, sedangkan server MySQL di Windows dijalankan pada port \texttt{3333}.
+\begin{lstlisting}[caption={Menghubungkan Slave ke Master menggunakan \texttt{CHANGE MASTER TO}}, label={lst:sql-change-master}]
+CHANGE MASTER TO
+  MASTER_HOST='10.33.35.96',
+  MASTER_USER='replica_user',
+  MASTER_PASSWORD='abc',
+  MASTER_LOG_FILE='mysql-bin.000001',
+  MASTER_LOG_POS=157;
+
+START REPLICA; -- atau START SLAVE;
+\end{lstlisting}
+
+\par Setelah replikasi dijalankan, status replikasi diperiksa menggunakan \texttt{SHOW SLAVE STATUS\textbackslash G} (atau \texttt{SHOW REPLICA STATUS\textbackslash G} pada MySQL versi baru). Indikator yang diperhatikan adalah \texttt{Slave\_IO\_Running} dan \texttt{Slave\_SQL\_Running} yang keduanya harus bernilai \texttt{Yes}.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{resource/Pertemuan 6/14.png}
+  \caption{Memeriksa status replikasi pada MySQL Slave}
+  \label{fig:p6-14-slave-status}
+\end{figure}
+
+\subsection{Verifikasi Database pada Master dan Slave}
+\par Setelah konfigurasi replikasi berjalan, saya membandingkan daftar database pada Master dan Slave menggunakan \texttt{SHOW DATABASES}. Pada tahap ini terlihat bahwa database aplikasi yang sudah ada sebelumnya (misalnya \texttt{koperasi} dan \texttt{sait\_db}) belum muncul pada Slave, sementara database sistem sudah ada. Bukti perbandingan Master vs Slave ditunjukkan pada Gambar \ref{fig:p6-15-master-vs-slave-dbs}.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{resource/Pertemuan 6/15.png}
+  \caption{Perbandingan daftar database: Master vs Slave (database aplikasi belum muncul di Slave)}
+  \label{fig:p6-15-master-vs-slave-dbs}
+\end{figure}
+
+\subsection{Uji Coba Replikasi dengan Membuat Database Baru}
+\par Untuk memastikan replikasi berjalan, saya melakukan uji coba dengan membuat database baru di Master, kemudian mengecek apakah database tersebut ikut muncul di Slave. Pada modul praktikum, contoh database yang dibuat adalah \texttt{uji\_coba}. Dengan cara ini, saya dapat memastikan bahwa event \texttt{CREATE DATABASE} pada Master terekam di binary log dan diterapkan pada Slave.
+
+\par Contoh perintah uji ditunjukkan pada Kode \ref{lst:sql-test-repl-create-db}.
+\begin{lstlisting}[caption={Uji replikasi: membuat database baru di Master}, label={lst:sql-test-repl-create-db}]
+-- Jalankan di Master
+CREATE DATABASE uji_coba;
+
+-- Jalankan di Slave untuk verifikasi
+SHOW DATABASES;
+\end{lstlisting}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{resource/Pertemuan 6/16.png}
+  \caption{Uji replikasi: database baru di Master ikut muncul di Slave}
+  \label{fig:p6-16-uji-replikasi}
+\end{figure}
+
+\subsection{Analisis: Mengapa \texttt{sait\_db} Tidak Tereplikasi ke Slave}
+\par Dari hasil pengecekan, jumlah database pada Master lebih banyak dibandingkan Slave. Master memiliki 6 database, sedangkan Slave hanya memiliki 5 database. Database yang tidak muncul di Slave adalah \texttt{sait\_db}.
+
+\par Penyebab utama \texttt{sait\_db} tidak ikut muncul di Slave adalah karena replikasi MySQL berbasis \textit{binary log} hanya mengirimkan \textit{perubahan} setelah Slave mulai membaca dari posisi tertentu (\texttt{MASTER\_LOG\_FILE} dan \texttt{MASTER\_LOG\_POS}). Jika \texttt{sait\_db} sudah ada dan sudah terisi data \textbf{sebelum} proses replikasi dimulai, maka event \texttt{CREATE DATABASE} dan data awalnya tidak lagi dikirim ke Slave (karena event tersebut berada \textit{sebelum} posisi replikasi yang digunakan). Akibatnya, database tersebut tidak otomatis tersalin ke Slave.
+
+\par Hal ini terlihat dari cuplikan dump SQL \texttt{all.sql} (hasil \textit{backup}) yang memuat pembuatan database \texttt{sait\_db} dan data tabel \texttt{mahasiswa}. Agar dokumen tidak terlalu panjang, saya menampilkan cuplikan kecil yang diambil dari \texttt{all.sql} pada Kode \ref{lst:allsql-saitdb-excerpt}.
+\lstinputlisting[caption={Cuplikan dump (diambil dari \texttt{all.sql}) yang memuat database \texttt{sait\_db} dan \texttt{uji\_coba}}, label={lst:allsql-saitdb-excerpt}]{resource/all-saitdb-excerpt.sql}
+
+\subsection{Solusi: Menyalin \texttt{sait\_db} ke Slave dan Menjaga Replikasi Tetap Berjalan}
+\par Solusi yang dilakukan agar \texttt{sait\_db} ikut ada di Slave dan selanjutnya ikut tereplikasi ketika ada penambahan data adalah melakukan \textit{sinkronisasi awal} (\textit{initial seeding}) database tersebut dari Master ke Slave. Secara umum terdapat dua pendekatan:
+\begin{enumerate}
+  \item \textbf{Dump hanya database \texttt{sait\_db}} lalu import ke Slave (lebih aman dan ukuran file lebih kecil).
+  \item \textbf{Dump seluruh database} (\texttt{--all-databases}) lalu import ke Slave. Pada praktik nyata, pendekatan ini perlu hati-hati karena dapat menimpa database sistem \texttt{mysql} (privilege).
+\end{enumerate}
+
+\par Pada praktikum ini saya menggunakan dump SQL sebagai sumber penyalinan awal (contohnya \texttt{all.sql}). Langkah solusi yang dapat dilakukan adalah sebagai berikut:
+\begin{enumerate}
+  \item \textbf{(Slave/Windows)} Hentikan replikasi sementara untuk mencegah konflik saat import: \texttt{STOP SLAVE;} / \texttt{STOP REPLICA;}.
+  \item \textbf{(Master/Ubuntu)} Buat dump database \texttt{sait\_db}: \texttt{mysqldump --databases sait\_db > sait\_db.sql} (atau gunakan \texttt{all.sql} yang sudah dibuat).
+  \item \textbf{(Transfer)} Pindahkan file dump (\texttt{sait\_db.sql} atau \texttt{all.sql}) ke komputer Slave.
+  \item \textbf{(Slave/Windows)} Import dump ke MySQL Slave melalui command prompt (bukan di dalam MySQL CLI) dan pastikan port sesuai, misalnya \texttt{-P 3333}.
+  \item \textbf{(Slave/Windows)} Jalankan kembali replikasi dan cek status hingga \texttt{Slave\_IO\_Running=Yes} dan \texttt{Slave\_SQL\_Running=Yes}.
+  \item \textbf{(Uji)} Tambahkan data baru pada \texttt{sait\_db} di Master (misal insert ke tabel \texttt{mahasiswa}) lalu verifikasi data tersebut muncul di Slave.
+\end{enumerate}
+
+\par Contoh perintah dump dan import yang digunakan ditunjukkan pada Kode \ref{lst:cmd-dump-import-saitdb}. Perintah ini juga menjelaskan perbedaan konteks: dump dilakukan pada sisi server (Ubuntu Master) sedangkan import dilakukan pada sisi komputer (Windows Slave).
+\begin{lstlisting}[caption={Contoh perintah dump dan import \texttt{sait\_db} (Master vs Slave)}, label={lst:cmd-dump-import-saitdb}]
+# (Ubuntu Master) dump database sait_db saja
+sudo mysqldump --databases sait_db --single-transaction > sait_db.sql
+
+# (Windows Slave) import ke MySQL slave (jalankan di CMD/PowerShell, bukan di mysql>)
+D:\path\to\mysql\bin\mysql -u root -P 3333 < "D:\path\to\sait_db.sql"
+
+# (Windows Slave) jalankan kembali replikasi
+START SLAVE;
+SHOW SLAVE STATUS\G
+\end{lstlisting}
+
+\par Pada sisi Master, proses dump harus dijalankan di shell (bukan di dalam prompt \texttt{mysql>}). Selain itu, pada Ubuntu sering kali user \texttt{root} menggunakan autentikasi \textit{socket}, sehingga \texttt{mysqldump -u root -p} dapat memunculkan error akses (contohnya ditunjukkan pada Gambar \ref{fig:p6-17-mysqldump-master}). Salah satu solusi yang umum adalah menggunakan \texttt{sudo mysqldump ...} atau membuat user khusus backup.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{resource/Pertemuan 6/17.png}
+  \caption{Contoh percobaan \texttt{mysqldump} di Master dan error yang muncul bila dijalankan pada konteks yang tidak tepat}
+  \label{fig:p6-17-mysqldump-master}
+\end{figure}
+
+\par Pada sisi Slave, proses import juga harus dilakukan dari CMD/PowerShell (bukan di dalam prompt \texttt{mysql>}). Setelah import berhasil, database yang sebelumnya belum ada seperti \texttt{sait\_db} dapat muncul di Slave. Verifikasi hasil import ditunjukkan pada Gambar \ref{fig:p6-18-import-slave}.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{resource/Pertemuan 6/18.png}
+  \caption{Proses import dump di Slave dan verifikasi bahwa database aplikasi (termasuk \texttt{sait\_db}) sudah muncul}
+  \label{fig:p6-18-import-slave}
+\end{figure}
+
+\par Setelah proses \textit{initial seeding} selesai, database \texttt{sait\_db} akan muncul di Slave dan perubahan berikutnya (INSERT/UPDATE/DELETE) pada \texttt{sait\_db} di Master akan ikut terekam di binary log serta diterapkan pada Slave.
 
 \section{Kesimpulan}
 
