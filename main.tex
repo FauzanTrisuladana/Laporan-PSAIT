@@ -86,8 +86,8 @@
 }
 
 % Info dokumen
-\newcommand{\Pertemuan}{3}
-\newcommand{\Materi}{Routing dan Controller pada Laravel}
+\newcommand{\Pertemuan}{7}
+\newcommand{\Materi}{Sinkronisasi Database Menggunakan REST API}
 \title{Laporan Praktikum \\ Sistem Administrasi dan Informasi Terdistribusi\\
 Pertemuan \Pertemuan\\
 \Materi}
@@ -206,14 +206,25 @@ Dosen Pengampu & : & \DosenPengampu \\
 
 \section{Tujuan Praktikum}
 \begin{enumerate}
-  \item 
-  \item 
+  \item Mahasiswa mampu menggunakan REST API dari Server Ubuntu yang telah dibuatnya di aplikasi front-end yang berada di komputer/laptop yang berbeda dari Server Ubuntu.
+  \item Mahasiswa mampu memodifikasi aplikasi front-end guna menambahkan fungsionalitas insert, update, delete data di database lokal.
+  \item Mahasiswa mampu menerapkan sinkronisasi database lokal dengan database yang ada di Server Ubuntu menggunakan REST API.
 \end{enumerate}
 
 \section{Dasar Teori}
-{\color{red}
-\par (Silakan anda tambahkan teori terkait percobaan unit ini dan cantumkan sumber referensinya
-pada bagian daftar pustaka.)}
+
+\subsection{REST API}
+\par REST API atau \textit{Representational State Transfer Application Programming Interface} adalah antarmuka pemrograman aplikasi yang mengikuti prinsip-prinsip arsitektur REST. REST sendiri diperkenalkan oleh Roy Fielding sebagai gaya arsitektur untuk sistem hipermedia terdistribusi, dan kemudian menjadi salah satu pendekatan yang paling banyak digunakan dalam pengembangan layanan web modern \cite{ibm-rest-api,restfulapi-rest}. Pada pendekatan ini, data dan fungsi dipandang sebagai \textit{resource} yang diidentifikasi melalui URI, lalu diakses atau dimanipulasi menggunakan antarmuka yang seragam. Karena sifatnya ringan, fleksibel, dan mudah diintegrasikan dengan berbagai bahasa pemrograman serta format data, REST API banyak digunakan untuk pertukaran data antara frontend, backend, layanan web, maupun database \cite{ibm-rest-api}.
+
+\par Sebuah REST API yang baik dibangun berdasarkan sejumlah kendala arsitektural utama, yaitu \textit{uniform interface}, \textit{client-server}, \textit{stateless}, \textit{cacheable}, \textit{layered system}, dan \textit{code on demand} sebagai sifat opsional \cite{ibm-rest-api,restfulapi-rest}. Prinsip \textit{client-server} menekankan pemisahan tanggung jawab antara sisi klien dan sisi server, sehingga antarmuka pengguna dapat berkembang secara independen dari logika dan penyimpanan data di server. Sementara itu, sifat \textit{stateless} mengharuskan setiap request membawa seluruh informasi yang dibutuhkan untuk diproses, tanpa bergantung pada sesi yang disimpan di server. Pendekatan ini membuat REST API lebih sederhana, mudah diskalakan, dan lebih cocok digunakan pada arsitektur sistem terdistribusi \cite{ibm-rest-api,restfulapi-rest}.
+
+\par Dalam implementasinya, REST API sangat sering berjalan di atas protokol HTTP, walaupun REST dan HTTP bukanlah hal yang sama \cite{restfulapi-rest}. Pada praktik umum, method HTTP seperti \texttt{GET}, \texttt{POST}, \texttt{PUT}, dan \texttt{DELETE} digunakan untuk mendukung operasi \textit{create}, \textit{read}, \textit{update}, dan \textit{delete} pada resource. Data hasil pertukaran biasanya direpresentasikan dalam format JSON karena mudah dibaca oleh manusia maupun mesin, serta bersifat independen terhadap bahasa pemrograman \cite{ibm-rest-api}. Selain itu, request dan response juga memanfaatkan header, parameter, serta status code HTTP untuk menyampaikan metadata, otorisasi, keberhasilan proses, maupun informasi kesalahan. Oleh karena itu, REST API sangat sesuai digunakan pada praktikum ini karena memudahkan komunikasi antara backend di server VPS dan frontend di komputer host.
+
+\subsection{MySQL}
+\par MySQL adalah sistem manajemen basis data relasional (RDBMS) yang menggunakan Structured Query Language (SQL) untuk melakukan definisi skema, manipulasi data, dan query. MySQL menerapkan arsitektur client--server, di mana proses server (\texttt{mysqld}) menyimpan serta mengelola data, sedangkan klien (misalnya \texttt{mysql}) digunakan untuk terhubung dan mengeksekusi perintah SQL. Dalam praktik pengembangan aplikasi, MySQL banyak dipakai karena performanya baik, dukungan ekosistem luas, serta ketersediaan dokumentasi yang lengkap \cite{mysql-refman}.
+
+\par Pada sisi administrasi sistem, konfigurasi MySQL umumnya dilakukan melalui berkas konfigurasi (misalnya \texttt{mysqld.cnf} di Linux atau \texttt{my.ini} di Windows) untuk mengatur parameter layanan seperti port, direktori data, serta kebijakan akses jaringan melalui \texttt{bind-address}. Selain itu, MySQL memiliki mekanisme autentikasi dan hak akses (privileges) untuk memastikan hanya user tertentu yang dapat mengakses database sesuai perannya \cite{mysql-refman}.
+
 
 %contoh gambar dan kode
 % \begin{figure}[H]
