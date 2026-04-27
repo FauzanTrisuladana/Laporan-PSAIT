@@ -35,6 +35,8 @@
 \renewcommand{\thefigure}{\thesection.\arabic{figure}}
 \makeatletter
 \@addtoreset{figure}{section}
+% Hindari duplikasi anchor hyperref untuk figure saat counter di-reset per section
+\renewcommand*{\theHfigure}{\thesection.\arabic{figure}}
 \makeatother
 
 % Format chapter
@@ -120,7 +122,7 @@ Pertemuan \Pertemuan\\
 \begin{minipage}{0.8\textwidth}
 \raggedright
 \begin{large}
-\begin{tabular}{@{}l@{\hspace{1.5em}}c@{\hspace{1.5em}}p{\textwidth}@{}}
+\begin{tabular}{@{}l@{\hspace{1.5em}}c@{\hspace{1.5em}}p{0.6\linewidth}@{}}
 Nama & : & \NamaMahasiswa \\
 NIM & : & \NIMMahasiswa \\
 Kelas & : & \KelasMahasiswa \\
@@ -241,7 +243,236 @@ Dosen Pengampu & : & \DosenPengampu \\
 
 \section{Hasil dan Pembahasan}
 
+\par Pada pertemuan kali ini saya melakukan implementasi sinkronisasi database MySQL antara komputer Windows (sebagai database lokal) dan Ubuntu Server/VPS (sebagai database di server) menggunakan REST API. Sinkronisasi ini bertujuan agar data mahasiswa pada aplikasi front-end di laptop dapat menampilkan dua sumber data (lokal dan server) serta setiap perubahan data (\textit{insert}, \textit{update}, \textit{delete}) yang dilakukan di sisi lokal dapat diteruskan ke server melalui request REST API.
+
+\par Sebelum memulai praktikum, saya menginstal \textit{phpMyAdmin} pada server untuk memudahkan melihat database dan tabel secara visual (tanpa harus selalu menggunakan MySQL CLI). Dengan bantuan phpMyAdmin, saya dapat melakukan pengecekan struktur tabel, isi data, dan proses import file \texttt{.sql} dengan lebih cepat.
+
+\par Secara ringkas, langkah-langkah yang saya lakukan adalah sebagai berikut:
+\begin{enumerate}
+  \item Menyiapkan phpMyAdmin untuk memudahkan proses pengecekan database, baik di sisi server (VPS Ubuntu) maupun di komputer lokal.
+  \item Menyamakan database awal antara VPS dan lokal dengan mengimpor \path{mahasiswa.sql} sehingga isi tabel \texttt{mahasiswa} konsisten.
+  \item Menggunakan backend REST API mahasiswa yang sudah dibuat pada pertemuan sebelumnya di VPS, yaitu folder \texttt{resource/sait\_api}. Pada praktikum ini, file API di server tidak banyak diubah karena sudah dikerjakan di pertemuan-pertemuan sebelumnya.
+  \item Mengonfigurasi aplikasi client (front-end) pada laptop (folder \path{resource/sait_client_case6}) agar dapat terhubung ke database lokal dan dapat mengakses endpoint REST API di VPS.
+  \item Menyesuaikan alamat endpoint REST API pada sisi client (mengganti API address) agar mengarah ke VPS yang digunakan pada praktikum ini.
+  \item Membuat dashboard yang menampilkan daftar mahasiswa dari dua sumber: database lokal Windows (query SQL langsung) dan database VPS Ubuntu (hasil response REST API).
+  \item Menambahkan fitur CRUD pada aplikasi client: \textit{insert}, \textit{update}, dan \textit{delete} pada database lokal, lalu meneruskan perubahan yang sama ke VPS melalui REST API.
+  \item Melakukan pengujian end-to-end dan verifikasi hasil menggunakan phpMyAdmin serta tampilan aplikasi di browser.
+\end{enumerate}
+
+\subsection{Persiapan Database Lokal (Windows) menggunakan phpMyAdmin}
+\par Pada sisi komputer Windows lab, saya menyiapkan database lokal untuk menyimpan tabel \texttt{mahasiswa}. Agar memudahkan proses setup dan pengecekan data, saya menggunakan phpMyAdmin pada localhost. Proses awal yang saya lakukan adalah import file \texttt{mahasiswa.sql} ke database lokal, sehingga struktur tabel dan data awal terbentuk. Proses import tersebut ditunjukkan pada Gambar \ref{fig:case6-01-import-local}.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{resource/dokumentasi/Screenshot (146).png}
+  \caption{Import file \texttt{mahasiswa.sql} ke phpMyAdmin lokal (Windows)}
+  \label{fig:case6-01-import-local}
+\end{figure}
+
+\par Setelah proses import berhasil, saya memverifikasi bahwa tabel \texttt{mahasiswa} sudah terbuat dan data awal sudah masuk. Pada tahap ini data yang terlihat merupakan data awal yang nantinya akan dibandingkan dengan isi tabel di server VPS. Hasil verifikasi ini ditunjukkan pada Gambar \ref{fig:case6-02-verify-local}.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{resource/dokumentasi/Screenshot (147).png}
+  \caption{Verifikasi data pada tabel \texttt{mahasiswa} di database lokal (Windows)}
+  \label{fig:case6-02-verify-local}
+\end{figure}
+
+\subsection{Persiapan Database di VPS (Ubuntu) dan Verifikasi melalui phpMyAdmin}
+\par Setelah database lokal siap, saya memastikan database pada VPS Ubuntu juga sudah tersedia dan memiliki tabel \texttt{mahasiswa}. Pada VPS, database yang digunakan adalah \texttt{sait\_db}. Verifikasi dilakukan melalui phpMyAdmin di VPS dengan membuka tabel \texttt{mahasiswa} dan mengecek apakah data awal sudah sesuai. Hasil verifikasi pada sisi VPS ditunjukkan pada Gambar \ref{fig:case6-03-verify-vps}.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{resource/dokumentasi/Screenshot (148).png}
+  \caption{Verifikasi tabel \texttt{mahasiswa} pada database VPS (Ubuntu) menggunakan phpMyAdmin}
+  \label{fig:case6-03-verify-vps}
+\end{figure}
+
+\par Pada tahap ini, tujuan utamanya adalah memastikan kedua database (lokal dan VPS) berada pada kondisi awal yang sama, sehingga sinkronisasi berikutnya dapat diuji dengan lebih jelas.
+
+\subsection{Struktur Backend dan Frontend yang Digunakan}
+\par Praktikum ini menggunakan dua bagian utama proyek, yaitu backend REST API yang berjalan di VPS Ubuntu dan frontend yang dijalankan di komputer. Struktur folder yang digunakan pada laporan ini adalah:
+\begin{enumerate}
+  \item \textbf{Backend (VPS)}: \path{resource/sait_api} \newline
+  Berisi \texttt{config.php} (koneksi database VPS) dan \texttt{mahasiswa\_api.php} (endpoint REST API mahasiswa).
+  \item \textbf{Frontend/Client (Laptop)}: \path{resource/sait_client_case6} \newline
+  Berisi halaman \texttt{mahasiswa.php} (dashboard). \newline
+  Berisi halaman form \texttt{insertMahasiswaView.php} dan \texttt{updateMahasiswaView.php}. \newline
+  Berisi handler \texttt{insertMahasiswaDo.php}. \newline
+  Berisi handler \texttt{updateMahasiswaDo.php}. \newline
+  Berisi handler \texttt{deleteMahasiswaDo.php}.
+\end{enumerate}
+
+\par Pada sisi server, folder \texttt{sait\_api} tidak saya ubah secara signifikan pada praktikum ini karena endpoint REST API mahasiswa sudah dibuat dan diuji pada pertemuan sebelumnya. Fokus utama praktikum kali ini adalah penggabungan data server ke aplikasi client, serta penambahan fitur CRUD lokal yang kemudian disinkronkan ke server.
+
+\subsection{Cuplikan Kode Backend REST API (\texttt{sait\_api})}
+\par Pada sisi VPS, file \texttt{config.php} dibawah ini berisi konfigurasi koneksi ke database server (misalnya \texttt{sait\_db}). Konfigurasi koneksi database pada backend ditunjukkan pada Kode \ref{lst:saitapi-config}.
+
+\lstinputlisting[caption={Konfigurasi koneksi database pada backend (\texttt{sait\_api/config.php})}, label={lst:saitapi-config}]{resource/sait\_api/config.php}
+
+\par Endpoint REST API mahasiswa berada pada file \texttt{mahasiswa\_api.php}. File ini melakukan routing berdasarkan \texttt{REQUEST\_METHOD} (\texttt{GET}, \texttt{POST}, \texttt{DELETE}) dan menjalankan operasi CRUD terhadap tabel \texttt{mahasiswa}. Implementasi endpoint tersebut ditunjukkan pada Kode \ref{lst:saitapi-mahasiswa-api}.
+
+\lstinputlisting[caption={Implementasi endpoint REST API mahasiswa (\texttt{sait\_api/mahasiswa\_api.php})}, label={lst:saitapi-mahasiswa-api}]{resource/sait\_api/mahasiswa\_api.php}
+
+\subsection{Konfigurasi Koneksi Database Lokal pada Client}
+\par Agar aplikasi client dapat mengakses database di lokal, saya mengatur parameter koneksi MySQL pada file \texttt{config.php}. Konfigurasi ini mendefinisikan host, user, password, dan nama database yang digunakan pada sisi Windows.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{resource/dokumentasi/Screenshot (149).png}
+  \caption{Konfigurasi koneksi database lokal pada file \texttt{config.php} (client)}
+  \label{fig:case6-04-config-local}
+\end{figure}
+
+\par Cuplikan kode konfigurasi koneksi database lokal (client) dapat dilihat pada Kode \ref{lst:client-config}. Pengaturan ini juga didokumentasikan pada Gambar \ref{fig:case6-04-config-local}.
+
+\lstinputlisting[caption={Konfigurasi koneksi database lokal pada client (\texttt{sait\_client\_case6/config.php})}, label={lst:client-config}]{resource/sait\_client\_case6/config.php}
+
+\par Dengan konfigurasi tersebut, dashboard dapat menjalankan query SQL ke database lokal menggunakan \texttt{mysqli\_query} untuk menampilkan data mahasiswa pada bagian \textit{Data Mahasiswa di Windows OS}.
+
+\subsection{Menampilkan Data dari REST API (VPS Ubuntu) di Dashboard}
+\par Setelah data lokal berhasil ditampilkan, saya menambahkan tampilan data dari server VPS pada halaman dashboard yang sama (\texttt{mahasiswa.php}). Pada bagian \textit{Data Mahasiswa di Ubuntu OS}, data tidak diambil melalui query langsung ke MySQL, namun melalui HTTP request ke endpoint REST API di VPS.
+
+\par Pada implementasinya, saya menggunakan PHP cURL untuk mengakses endpoint \url{http://10.33.35.96/sait_api/mahasiswa_api.php} dan melakukan \texttt{json\_decode} terhadap response agar dapat ditampilkan sebagai tabel. Implementasi lengkap dashboard yang menampilkan data lokal dan data VPS dapat dilihat pada Kode \ref{lst:client-dashboard}.
+
+\lstinputlisting[caption={Dashboard menampilkan data lokal dan VPS (\texttt{sait\_client\_case6/mahasiswa.php})}, label={lst:client-dashboard}]{resource/sait\_client\_case6/mahasiswa.php}
+
+\subsection{Troubleshooting: Endpoint REST API Tidak Sesuai}
+\par Pada percobaan awal, saya sempat menggunakan alamat endpoint REST API yang tidak sesuai (misalnya masih mengarah ke IP lama). Kondisi tersebut ditunjukkan pada Gambar \ref{fig:case6-05-endpoint-wrong}. Hal ini menyebabkan response JSON tidak sesuai, bisa dikatakan error, dan menimbulkan peringatan \texttt{count(): Parameter must be an array} ketika kode memproses array data dari response JSON. Dampaknya terlihat pada Gambar \ref{fig:case6-06-warning-dashboard}.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{resource/dokumentasi/Screenshot (150).png}
+  \caption{Contoh konfigurasi endpoint REST API yang belum sesuai (mengarah ke alamat lama)}
+  \label{fig:case6-05-endpoint-wrong}
+\end{figure}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{resource/dokumentasi/Screenshot (153).png}
+  \caption{Dampak endpoint tidak sesuai: data VPS tidak tampil dan muncul warning di dashboard}
+  \label{fig:case6-06-warning-dashboard}
+\end{figure}
+
+\par Solusi yang saya lakukan adalah memperbarui alamat endpoint REST API agar sesuai dengan IP VPS yang aktif (Gambar \ref{fig:case6-07-endpoint-fixed}). Setelah endpoint diperbaiki, data mahasiswa dari server dapat tampil dengan benar di dashboard (Gambar \ref{fig:case6-08-dashboard-dual}).
+
+\par Perubahan alamat endpoint ini saya terapkan pada file client, terutama pada \texttt{mahasiswa.php} (untuk menampilkan data dari VPS) serta pada handler CRUD seperti \texttt{insertMahasiswaDo.php}, \texttt{updateMahasiswaDo.php}, dan \texttt{deleteMahasiswaDo.php}. Cuplikan pengaturan alamat endpoint yang digunakan pada client ditunjukkan pada Kode \ref{lst:client-endpoint}.
+
+\begin{lstlisting}[caption={Cuplikan pengaturan alamat endpoint REST API pada client}, label={lst:client-endpoint}]
+curl_setopt($curl, CURLOPT_URL, 'http://10.33.35.96/sait_api/mahasiswa_api.php');
+
+$url = 'http://10.33.35.96/sait_api/mahasiswa_api.php';
+\end{lstlisting}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{resource/dokumentasi/Screenshot (152).png}
+  \caption{Perbaikan endpoint REST API agar sesuai dengan IP VPS Ubuntu yang digunakan}
+  \label{fig:case6-07-endpoint-fixed}
+\end{figure}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{resource/dokumentasi/Screenshot (154).png}
+  \caption{Dashboard berhasil menampilkan data mahasiswa dari dua sumber (lokal dan VPS)}
+  \label{fig:case6-08-dashboard-dual}
+\end{figure}
+
+\subsection{Implementasi Sinkronisasi CRUD (Lokal ke VPS) melalui REST API}
+\par Setelah tampilan data dari dua sumber sudah berhasil, langkah berikutnya adalah menambahkan intervensi pengiriman data dari frontend ke server ketika user melakukan CRUD. Pola implementasi yang digunakan pada praktikum ini adalah:
+\begin{enumerate}
+  \item Jalankan query SQL terlebih dahulu untuk menyimpan perubahan ke database lokal.
+  \item Kirim request HTTP ke REST API di VPS (menggunakan cURL) agar perubahan yang sama juga diterapkan pada database server.
+\end{enumerate}
+
+\subsubsection{Insert Data Mahasiswa}
+\par Proses insert diawali dengan membuka halaman \texttt{insertMahasiswaView.php} untuk mengisi form \texttt{nama} dan \texttt{alamat}. Form insert ditunjukkan pada Gambar \ref{fig:case6-09-insert-form}. Setelah tombol submit ditekan, halaman \texttt{insertMahasiswaDo.php} akan menjalankan insert ke database lokal, lalu mengirim request POST (JSON) ke REST API di server. Output keberhasilan proses insert ditunjukkan pada Gambar \ref{fig:case6-10-insert-result}.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{resource/dokumentasi/Screenshot (155).png}
+  \caption{Form insert data mahasiswa pada aplikasi client (Windows)}
+  \label{fig:case6-09-insert-form}
+\end{figure}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{resource/dokumentasi/Screenshot (156).png}
+  \caption{Hasil insert: data tersimpan di lokal dan request berhasil diteruskan ke VPS}
+  \label{fig:case6-10-insert-result}
+\end{figure}
+
+\par Hasil insert kemudian diverifikasi melalui phpMyAdmin pada sisi VPS dan sisi lokal untuk memastikan bahwa data mahasiswa yang ditambahkan benar-benar masuk pada kedua database. Verifikasi pada VPS ditunjukkan pada Gambar \ref{fig:case6-11-insert-verify-vps}, sedangkan verifikasi pada database lokal ditunjukkan pada Gambar \ref{fig:case6-12-insert-verify-local}.
+
+\par Implementasi lengkap handler insert ditunjukkan pada Kode \ref{lst:client-insert-do}.
+
+\lstinputlisting[caption={Handler insert: lokal ke VPS via REST API}, label={lst:client-insert-do}]{resource/sait\_client\_case6/insertMahasiswaDo.php}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{resource/dokumentasi/Screenshot (157).png}
+  \caption{Verifikasi hasil insert pada database VPS (Ubuntu) melalui phpMyAdmin}
+  \label{fig:case6-11-insert-verify-vps}
+\end{figure}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{resource/dokumentasi/Screenshot (158).png}
+  \caption{Verifikasi hasil insert pada database lokal (Windows) melalui phpMyAdmin}
+  \label{fig:case6-12-insert-verify-local}
+\end{figure}
+
+\subsubsection{Update Data Mahasiswa}
+\par Proses update dilakukan dengan menekan tombol edit pada salah satu baris data, lalu aplikasi akan membuka halaman \texttt{updateMahasiswaView.php} untuk menampilkan form update (Gambar \ref{fig:case6-13-update-form}). Setelah disubmit, halaman \texttt{updateMahasiswaDo.php} akan mengupdate data di database lokal dan mengirim request POST ke REST API (dengan parameter \texttt{id\_mhs}) agar data di VPS ikut terupdate. Output keberhasilan proses update ditunjukkan pada Gambar \ref{fig:case6-14-update-result}.
+
+\par Implementasi lengkap handler update ditunjukkan pada Kode \ref{lst:client-update-do}.
+
+\lstinputlisting[caption={Handler update: lokal ke VPS via REST API}, label={lst:client-update-do}]{resource/sait\_client\_case6/updateMahasiswaDo.php}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{resource/dokumentasi/Screenshot (159).png}
+  \caption{Form update data mahasiswa pada aplikasi client (Windows)}
+  \label{fig:case6-13-update-form}
+\end{figure}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{resource/dokumentasi/Screenshot (160).png}
+  \caption{Hasil update: data terupdate di lokal dan request berhasil diteruskan ke VPS}
+  \label{fig:case6-14-update-result}
+\end{figure}
+
+\subsubsection{Delete Data Mahasiswa}
+\par Proses delete dilakukan dengan menekan tombol hapus pada salah satu baris data. Handler \texttt{deleteMahasiswaDo.php} akan menghapus data pada database lokal dan mengirim request DELETE ke endpoint REST API di VPS menggunakan \texttt{CURLOPT\_CUSTOMREQUEST}. Output keberhasilan proses delete ditunjukkan pada Gambar \ref{fig:case6-15-delete-result}.
+
+\par Implementasi lengkap handler delete ditunjukkan pada Kode \ref{lst:client-delete-do}.
+
+\lstinputlisting[caption={Handler delete: lokal ke VPS via REST API}, label={lst:client-delete-do}]{resource/sait\_client\_case6/deleteMahasiswaDo.php}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{resource/dokumentasi/Screenshot (161).png}
+  \caption{Hasil delete: data terhapus di lokal dan request DELETE berhasil diteruskan ke VPS}
+  \label{fig:case6-15-delete-result}
+\end{figure}
+
+\subsection{Konsistensi \texttt{id\_mhs} antara Lokal dan VPS}
+\par Pada sinkronisasi \textit{update} dan \textit{delete}, parameter yang paling penting adalah \texttt{id\_mhs}. Agar operasi \textit{update} dan \textit{delete} benar-benar memodifikasi baris data yang sama pada kedua database, maka nilai \texttt{id\_mhs} pada data lokal dan VPS harus konsisten. Jika nilai \texttt{id\_mhs} berbeda (misalnya karena perbedaan auto-increment atau data awal yang belum sama), maka update/delete bisa saja berjalan pada database lokal, tetapi tidak mengenai baris yang sama pada database VPS.
+
+\par Oleh karena itu, langkah yang saya lakukan adalah memastikan data awal kedua database dibuat sama terlebih dahulu dengan (\textit{initial seeding} melalui import \texttt{mahasiswa.sql}) dan selalu melakukan operasi CRUD melalui satu alur aplikasi yang sama, sehingga perubahan yang terjadi dapat tetap sinkron.
+
 \section{Kesimpulan}
+
+\par Kesimpulan dari praktikum sinkronisasi database MySQL menggunakan REST API adalah sebagai berikut:
+\begin{enumerate}
+  \item Aplikasi client pada Windows berhasil menampilkan data mahasiswa dari dua sumber, yaitu database lokal (query SQL langsung) dan database server Ubuntu (melalui REST API). Hal ini dibuktikan dengan tampilan dashboard yang memperlihatkan dua tabel data mahasiswa yang berbeda sumber namun memiliki struktur data yang sama.
+  \item Sinkronisasi perubahan data (CRUD) berhasil diterapkan dengan pola: simpan perubahan ke database lokal, lalu kirim request REST API agar perubahan yang sama diterapkan di VPS. Proses insert, update, dan delete dapat dijalankan dari frontend dan menghasilkan response status dari REST API.
+  \item Pengecekan dan validasi data menjadi lebih mudah dengan bantuan phpMyAdmin, baik untuk memastikan hasil import \texttt{mahasiswa.sql} maupun untuk memverifikasi perubahan data setelah operasi CRUD.
+  \item Terdapat catatan penting bahwa operasi update/delete sangat bergantung pada konsistensi \texttt{id\_mhs} antara data lokal dan VPS. Karena itu diperlukan \textit{initial seeding} dan disiplin alur perubahan data agar sinkronisasi bekerja dengan benar.
+\end{enumerate}
+
+\par Berdasarkan tujuan praktikum dan percobaan pada pertemuan ini, saya berhasil memahami cara memanfaatkan REST API mahasiswa yang di-host pada VPS Ubuntu serta menggabungkannya dengan database lokal pada aplikasi frontend di laptop. Dengan demikian, aplikasi dapat menampilkan data dari dua sumber sekaligus dan menjaga sinkronisasi perubahan data melalui mekanisme request REST API.
 
 \section{Daftar Pustaka}
 \printbibliography[heading=none]
