@@ -1,0 +1,100 @@
+{
+  "v": 11,
+  "id": "cmoi8neuu6vk3gb1mbdw0257z",
+  "name": "Pertemuan 8",
+  "folders": [],
+  "requests": [
+    {
+      "v": "17",
+      "name": "Cek",
+      "method": "GET",
+      "endpoint": "<<link>>",
+      "params": [],
+      "headers": [],
+      "preRequestScript": "",
+      "testScript": "",
+      "auth": {
+        "authType": "inherit",
+        "authActive": true
+      },
+      "body": {
+        "contentType": null,
+        "body": null
+      },
+      "requestVariables": [],
+      "responses": {},
+      "description": null
+    },
+    {
+      "v": "17",
+      "name": "Register",
+      "method": "POST",
+      "endpoint": "<<link>>/api/register/index.php",
+      "params": [],
+      "headers": [],
+      "preRequestScript": "",
+      "testScript": "",
+      "auth": {
+        "authType": "inherit",
+        "authActive": true
+      },
+      "body": {
+        "contentType": "application/json",
+        "body": "{\n  \"first_name\" : \"user\",\n  \"last_name\" : \"praktikan\",\n  \"email\" : \"praktikan1@example.com\",\n  \"password\" : \"password123\",\n  \"role\" : \"userss\"\n}"
+      },
+      "requestVariables": [],
+      "responses": {},
+      "description": null
+    },
+    {
+      "v": "17",
+      "name": "Login",
+      "method": "POST",
+      "endpoint": "<<link>>/api/login/index.php",
+      "params": [],
+      "headers": [],
+      "preRequestScript": "",
+      "testScript": "const res = pw.response.body;\r\n\r\nconst jwt = res.jwt;\r\n\r\npw.env.set(\"jwt\", jwt);",
+      "auth": {
+        "authType": "inherit",
+        "authActive": true
+      },
+      "body": {
+        "contentType": "application/json",
+        "body": "{\n  \"email\" : \"praktikan2@example.com\",\n  \"password\" : \"password123\"\n}"
+      },
+      "requestVariables": [],
+      "responses": {},
+      "description": null
+    },
+    {
+      "v": "17",
+      "name": "Get All Users",
+      "method": "GET",
+      "endpoint": "<<link>>/api/users/index.php",
+      "params": [],
+      "headers": [],
+      "preRequestScript": "",
+      "testScript": "",
+      "auth": {
+        "authType": "bearer",
+        "token": "<<jwt>>",
+        "authActive": true
+      },
+      "body": {
+        "contentType": null,
+        "body": null
+      },
+      "requestVariables": [],
+      "responses": {},
+      "description": null
+    }
+  ],
+  "auth": {
+    "authType": "inherit",
+    "authActive": true
+  },
+  "headers": [],
+  "variables": [],
+  "description": null
+}
