@@ -244,7 +244,555 @@ Dosen Pengampu & : & \DosenPengampu \\
 
 \section{Hasil dan Pembahasan}
 
+\par Pada pertemuan ini saya melakukan implementasi \textit{API Authentication} menggunakan JSON Web Token (JWT) pada aplikasi PHP. Alur praktikum mengikuti urutan pada modul (bagian Langkah Percobaan), dimulai dari menyiapkan \textit{source code}, mengonfigurasi koneksi database, melakukan impor database, lalu menguji endpoint REST API menggunakan Hoppscotch hingga berhasil memanfaatkan token JWT untuk mengakses endpoint yang dilindungi.
+
+\par Secara ringkas, langkah yang saya lakukan adalah sebagai berikut:
+\begin{enumerate}
+  \item Menyiapkan \textit{source code} JWT contoh dari repository (disimpan sebagai \textbf{kode lama}).
+  \item Mengonfigurasi koneksi database MySQL pada file \texttt{config/database.php}.
+  \item Mengimpor file \texttt{php\_jwt\_db.sql} ke database melalui phpMyAdmin dan memverifikasi tabel \texttt{users}.
+  \item Membuat environment pada Hoppscotch untuk menyimpan \textit{base URL} dan token JWT.
+  \item Menguji endpoint \texttt{Cek}, \texttt{Register}, \texttt{Login}, dan \texttt{Get All Users}.
+  \item Melakukan \textit{debugging} token JWT menggunakan \url{https://jwt.io} untuk melihat payload (termasuk \texttt{role}).
+  \item Melakukan troubleshooting saat header \texttt{Authorization} tidak terbaca, lalu memperbaiki kode (disimpan sebagai \textbf{kode baru}).
+  \item Menguji kembali akses berdasarkan \texttt{role} (admin vs user vs role lain) untuk verifikasi otorisasi.
+\end{enumerate}
+
+\subsection{Alat dan Bahan}
+\par Mengacu pada modul praktikum, alat dan bahan yang digunakan pada pertemuan ini adalah:
+\begin{enumerate}
+  \item Komputer/ laptop untuk menjalankan browser dan editor.
+  \item Server web (Apache/Nginx) + PHP untuk menjalankan aplikasi JWT.
+  \item MySQL sebagai database.
+  \item phpMyAdmin untuk mempermudah impor dan verifikasi database.
+  \item Hoppscotch sebagai alat dokumentasi dan pengujian REST API (alternatif Postman).
+  \item Visual Studio Code untuk melihat dan mengubah source code.
+  \item Git untuk mengambil source code awal (repository contoh).
+\end{enumerate}
+
+\subsection{Menyiapkan Source Code (Kode Lama)}
+\par Langkah pertama adalah menyiapkan source code aplikasi contoh JWT dengan melakukan \textit{clone} repository. Untuk memudahkan dokumentasi perubahan, saya memisahkan versi source code menjadi dua:
+\begin{enumerate}
+  \item \textbf{Kode lama}: source code hasil clone awal (folder \path{resource/kode lama}).
+  \item \textbf{Kode baru}: source code setelah dilakukan perbaikan untuk menangani error pembacaan header \texttt{Authorization} (folder \path{resource/kode baru}).
+\end{enumerate}
+
+\par Proses penyiapan source code serta pengecekan awal file konfigurasi database ditunjukkan pada Gambar \ref{fig:p8-01-clone-config}.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{resource/dokumentasi/1 - clone dan config database.png}
+  \caption{Menyiapkan source code dan mengubah konfigurasi database pada aplikasi JWT}
+  \label{fig:p8-01-clone-config}
+\end{figure}
+
+\subsection{Konfigurasi Koneksi Database MySQL}
+\par Setelah source code siap, saya menyesuaikan konfigurasi koneksi database pada file \texttt{config/database.php}. Pada \textbf{kode lama}, konfigurasi database masih menggunakan database \texttt{php\_jwt\_db} dan akun \texttt{root}. Pada \textbf{kode baru}, konfigurasi tersebut saya sesuaikan dengan database yang digunakan pada server, yaitu \texttt{sait\_db} serta user database yang tersedia.
+
+\par Cuplikan konfigurasi database pada \textbf{kode baru} ditunjukkan pada Kode \ref{lst:db-config-new}.
+
+\begin{lstlisting}[caption={Konfigurasi koneksi database pada kode baru (\texttt{config/database.php})}, label={lst:db-config-new}]
+<?php
+// used to get mysql database connection
+class DatabaseService{
+
+    private $db_host = "localhost";
+    private $db_name = "sait_db";
+    private $db_user = "fauzan";
+    private $db_password = "fauzan123";
+    private $connection;
+
+    public function getConnection(){
+
+        $this->connection = null;
+
+        try{
+            $this->connection = new PDO("mysql:host=" . $this->db_host . ";dbname=" . $this->db_name, $this->db_user, $this->db_password);
+        }catch(PDOException $exception){
+            echo "Connection failed: " . $exception->getMessage();
+        }
+
+        return $this->connection;
+    }
+}
+?>
+\end{lstlisting}
+
+\subsection{Import Database \texttt{php\_jwt\_db.sql} dan Verifikasi Tabel}\label{subsec:p8-import-db}
+\par Setelah konfigurasi koneksi database selesai, saya mengimpor file \texttt{php\_jwt\_db.sql} melalui phpMyAdmin. Proses impor ini bertujuan membuat tabel \texttt{users} beserta struktur kolomnya agar endpoint \texttt{register} dan \texttt{login} dapat berjalan.
+
+\par Proses pemilihan file untuk impor ditunjukkan pada Gambar \ref{fig:p8-02-import-db}. Setelah proses dijalankan, phpMyAdmin menampilkan informasi bahwa impor berhasil (Gambar \ref{fig:p8-03-import-success}).
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{resource/dokumentasi/2 - impot database.png}
+  \caption{Proses import file \texttt{php\_jwt\_db.sql} ke database \texttt{sait\_db} melalui phpMyAdmin}
+  \label{fig:p8-02-import-db}
+\end{figure}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{resource/dokumentasi/3 - hasil impot.png}
+  \caption{Hasil import database berhasil pada phpMyAdmin}
+  \label{fig:p8-03-import-success}
+\end{figure}
+
+\par Setelah impor berhasil, saya memverifikasi bahwa tabel \texttt{users} sudah terbentuk. Pada tahap ini, tabel masih kosong karena belum dilakukan proses register user. Verifikasi struktur tabel ditunjukkan pada Gambar \ref{fig:p8-04-table-users-empty}.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{resource/dokumentasi/4 - tabel yang ter import.png}
+  \caption{Verifikasi tabel \texttt{users} telah terbentuk (sebelum ada data)}
+  \label{fig:p8-04-table-users-empty}
+\end{figure}
+
+\subsection{Menyiapkan Pengujian Endpoint Menggunakan Hoppscotch}
+\par Setelah backend dan database siap, saya menyiapkan collection di Hoppscotch untuk menguji endpoint. Agar lebih rapi, saya membuat environment \texttt{Server} dengan variable \texttt{link} yang berisi \textit{base URL} aplikasi JWT. Setup environment ditunjukkan pada Gambar \ref{fig:p8-05-env-hoppscotch}.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{resource/dokumentasi/5 - setup env hoppscotch.png}
+  \caption{Membuat environment Hoppscotch dan menyimpan base URL pada variable \texttt{link}}
+  \label{fig:p8-05-env-hoppscotch}
+\end{figure}
+
+\subsubsection{Request \texttt{Cek} (GET)}
+\par Request \texttt{Cek} digunakan untuk memastikan service API dapat diakses dan merespon dengan JSON sederhana. Hasil pengujian ditunjukkan pada Gambar \ref{fig:p8-06-cek}.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{resource/dokumentasi/6 - cek.png}
+  \caption{Pengujian endpoint \texttt{Cek} berhasil mengembalikan response JSON}
+  \label{fig:p8-06-cek}
+\end{figure}
+
+\subsubsection{Request \texttt{Register} (POST)}
+\par Setelah endpoint dasar berhasil, saya menguji endpoint \texttt{Register} untuk menambahkan user baru ke tabel \texttt{users}. Pada percobaan ini saya membuat akun dengan \texttt{role=admin} agar bisa mengakses endpoint yang membutuhkan otorisasi \textit{admin}. Hasil register berhasil ditunjukkan pada Gambar \ref{fig:p8-07-register-admin}.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{resource/dokumentasi/7 - register.png}
+  \caption{Pengujian endpoint \texttt{Register}: akun admin berhasil ditambahkan}
+  \label{fig:p8-07-register-admin}
+\end{figure}
+
+\subsubsection{Request \texttt{Login} (POST) dan Pembuatan JWT}
+\par Endpoint \texttt{Login} digunakan untuk memverifikasi email dan password, lalu mengembalikan token JWT apabila login berhasil. Response login yang berisi token JWT ditunjukkan pada Gambar \ref{fig:p8-08-login-admin}. Token inilah yang digunakan pada request \texttt{Get All Users} sebagai bearer token.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{resource/dokumentasi/8 - login.png}
+  \caption{Pengujian endpoint \texttt{Login}: server mengembalikan token JWT}
+  \label{fig:p8-08-login-admin}
+\end{figure}
+
+\par Mekanisme pembentukan JWT dilakukan pada endpoint \texttt{api/login/index.php} dengan menyusun \textit{claims} (\texttt{iss}, \texttt{aud}, \texttt{iat}, \texttt{exp}) dan \textit{payload} \texttt{data} (termasuk \texttt{role}), lalu dienkode menggunakan algoritma \texttt{HS256}. Cuplikan implementasi login ditunjukkan pada Kode \ref{lst:login-encode}.
+
+\begin{lstlisting}[caption={Cuplikan pembuatan JWT pada endpoint login (\texttt{api/login/index.php})}, label={lst:login-encode}]
+// ...
+$token = array(
+    "iss" => $issuer_claim,
+    "aud" => $audience_claim,
+    "iat" => $issuedat_claim,
+    "exp" => $expire_claim,
+    "data" => array(
+        "id" => $id,
+        "firstname" => $firstname,
+        "lastname" => $lastname,
+        "email" => $email,
+        "role" => $role
+    )
+);
+
+// jwt encoded
+$jwt = JWT::encode($token, $secret_key, 'HS256');
+// ...
+\end{lstlisting}
+
+\subsubsection{Post-request Script: Menyimpan JWT ke Environment}
+\par Agar token tidak perlu dicopy manual setiap kali login, saya membuat \textit{post-request script} pada request \texttt{Login} untuk menyimpan value \texttt{jwt} dari response ke environment variable \texttt{jwt}. Pengaturan script ditunjukkan pada Gambar \ref{fig:p8-11-post-script}, sedangkan isi script ditunjukkan pada Kode \ref{lst:hoppscotch-post-script}.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{resource/dokumentasi/11 - setup post script.png}
+  \caption{Konfigurasi post-request script pada Hoppscotch untuk menyimpan token JWT}
+  \label{fig:p8-11-post-script}
+\end{figure}
+
+\begin{lstlisting}[caption={Post-request script Hoppscotch untuk menyimpan token ke variable \texttt{jwt}}, label={lst:hoppscotch-post-script}]
+const res = pw.response.body;
+
+const jwt = res.jwt;
+
+pw.env.set("jwt", jwt);
+\end{lstlisting}
+
+\subsubsection{Request \texttt{Get All Users} (GET) dengan Bearer Token}
+\par Endpoint \texttt{Get All Users} mengharuskan client mengirim bearer token di header \texttt{Authorization}. Setelah token disimpan sebagai environment variable, saya menguji request ini dengan menggunakan token \texttt{<<jwt>>}. Hasil pengujian saat token valid dan role adalah \texttt{admin} ditunjukkan pada Gambar \ref{fig:p8-12-get-users-admin}.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{resource/dokumentasi/12 - pakai env tokennya.png}
+  \caption{Get All Users berhasil diakses menggunakan bearer token (role admin)}
+  \label{fig:p8-12-get-users-admin}
+\end{figure}
+
+\subsection{Debugging JWT Menggunakan jwt.io}
+\par Setelah token berhasil didapat dari endpoint \texttt{Login}, saya melakukan \textit{decode} token menggunakan \url{https://jwt.io} untuk memastikan isi payload sesuai, terutama informasi \texttt{role} yang dipakai untuk otorisasi. Hasil decode JWT ditunjukkan pada Gambar \ref{fig:p8-09-decode-jwt}.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{resource/dokumentasi/9 - cek jwt.png}
+  \caption{Decode JWT menggunakan \url{https://jwt.io} untuk melihat payload dan role}
+  \label{fig:p8-09-decode-jwt}
+\end{figure}
+
+\subsection{Troubleshooting: Header \texttt{Authorization} Tidak Terbaca}
+\par Pada percobaan awal, request \texttt{Get All Users} sempat gagal dengan status \texttt{401 Unauthorized}. Salah satu error yang muncul adalah \texttt{"Syntax error, malformed JSON"} (Gambar \ref{fig:p8-14-error-malformed}). Kondisi ini mengindikasikan token yang diterima server tidak valid (misalnya token kosong/terpotong) atau header \texttt{Authorization} tidak terbaca oleh PHP.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{resource/dokumentasi/14 - Error.png}
+  \caption{Contoh error \texttt{401 Unauthorized} ketika token tidak valid/terbaca}
+  \label{fig:p8-14-error-malformed}
+\end{figure}
+
+\par Selain itu, saya juga melakukan percobaan \textit{tampering} token dengan menghapus satu karakter pada environment variable \texttt{jwt} (Gambar \ref{fig:p8-13-token-tamper}). Percobaan ini bertujuan memastikan bahwa perubahan sekecil apa pun pada token akan membuat signature tidak valid sehingga akses ditolak.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{resource/dokumentasi/13 - hapus 1 huruf token.png}
+  \caption{Percobaan mengubah token (hapus satu karakter) pada environment Hoppscotch}
+  \label{fig:p8-13-token-tamper}
+\end{figure}
+
+\par Akar masalah yang saya temui adalah pembacaan header \texttt{Authorization} pada \textbf{kode lama} masih terlalu bergantung pada \texttt{HTTP\_AUTHORIZATION} di \texttt{\$\_SERVER}. Pada beberapa konfigurasi server Apache/PHP, header \texttt{Authorization} tidak otomatis diteruskan ke \texttt{\$\_SERVER} sehingga value menjadi kosong dan token tidak terbaca.
+
+\subsubsection{Kode Lama Endpoint Users (Sebelum Perbaikan)}
+\par Implementasi \textbf{kode lama} pada endpoint \texttt{/api/users/index.php} mengambil JWT langsung dari \texttt{\$\_SERVER['HTTP\_AUTHORIZATION']}. Implementasi tersebut ditunjukkan pada Kode \ref{lst:users-old}.
+
+\begin{lstlisting}[caption={Kode lama endpoint \texttt{/api/users/index.php} (pembacaan Authorization belum robust)}, label={lst:users-old}]
+<?php
+    include_once '../../config/database.php';
+    require "../../vendor/autoload.php";
+    use \Firebase\JWT\JWT;
+    use Firebase\JWT\Key;
+
+    header("Access-Control-Allow-Origin: *");
+    header("Access-Control-Allow-Methods: GET");
+    header("Content-Type: application/json");
+
+    $secret_key = "YOUR_SECRET_KEY";
+    $jwt = null;
+    $databaseService = new DatabaseService();
+    $dbConnection = $databaseService->getConnection();
+
+    // Get JWT token from header authorization
+    $authHeader = $_SERVER['HTTP_AUTHORIZATION'];
+    $arr = explode(" ", $authHeader);
+    $jwt = $arr[1];
+
+    if($jwt){
+        try {
+            $decoded = JWT::decode($jwt, new Key($secret_key, 'HS256'));
+            $data = $decoded->data;
+            $role = $data->role;
+
+            if($role == 'admin') {
+                $table_name = 'users';
+                $query = "SELECT first_name, last_name, email, role FROM " . $table_name;
+                $stmt = $dbConnection->prepare( $query );
+                $stmt->execute();
+                $result = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+
+                http_response_code(200);
+                echo json_encode(array(
+                    "message" => "Access granted",
+                    "data" => $result
+                ));
+            }
+            else {
+                http_response_code(401);
+                echo json_encode(array(
+                    "error" => [
+                        "code" => 401,
+                        "message" => "Access Denied",
+                    ]
+                ));
+            }
+        }catch (Exception $e){
+            http_response_code(401);
+            echo json_encode(array(
+                "error" => [
+                    "code" => 401,
+                    "message" => $e->getMessage()
+                ]
+            ));
+        }
+    }
+?>
+\end{lstlisting}
+
+\subsubsection{Perbaikan: Membaca Authorization dari Beberapa Sumber}\label{subsubsec:p8-fix-auth}
+\par Solusi yang saya lakukan pada \textbf{kode baru} adalah:
+\begin{enumerate}
+  \item Menambahkan fallback pembacaan header dari beberapa kemungkinan sumber, yaitu \texttt{HTTP\_AUTHORIZATION}, \texttt{REDIRECT\_HTTP\_AUTHORIZATION}, dan fungsi \texttt{getallheaders()}.
+  \item Menambahkan konfigurasi \texttt{.htaccess} untuk meneruskan header \texttt{Authorization} menjadi environment variable \texttt{HTTP\_AUTHORIZATION}.
+\end{enumerate}
+
+\par Perubahan kode pada file endpoint \texttt{/api/users/index.php} ditunjukkan pada Gambar \ref{fig:p8-10-fix-auth-header-code}.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{resource/dokumentasi/10 - ubah header jadi begitu karna error sebelumnya return json kosong.png}
+  \caption{Perubahan kode untuk memperbaiki pembacaan header \texttt{Authorization}}
+  \label{fig:p8-10-fix-auth-header-code}
+\end{figure}
+
+\par Implementasi lengkap \textbf{kode baru} endpoint users ditunjukkan pada Kode \ref{lst:users-new}.
+
+\begin{lstlisting}[caption={Kode baru endpoint \texttt{/api/users/index.php} (pembacaan Authorization lebih robust)}, label={lst:users-new}]
+<?php
+    include_once '../../config/database.php';
+    require "../../vendor/autoload.php";
+    use \Firebase\JWT\JWT;
+    use Firebase\JWT\Key;
+
+    header("Access-Control-Allow-Origin: *");
+    header("Access-Control-Allow-Methods: GET");
+    header("Content-Type: application/json");
+
+    $secret_key = "YOUR_SECRET_KEY";
+    $jwt = null;
+    $databaseService = new DatabaseService();
+    $dbConnection = $databaseService->getConnection();
+
+    $authHeader = null;
+
+    if (isset($_SERVER['HTTP_AUTHORIZATION'])) {
+        $authHeader = $_SERVER['HTTP_AUTHORIZATION'];
+    } elseif (isset($_SERVER['REDIRECT_HTTP_AUTHORIZATION'])) {
+        $authHeader = $_SERVER['REDIRECT_HTTP_AUTHORIZATION'];
+    } elseif (function_exists('getallheaders')) {
+        $headers = getallheaders();
+        if (isset($headers['Authorization'])) {
+            $authHeader = $headers['Authorization'];
+        }
+    }
+
+    if ($authHeader) {
+        $arr = explode(" ", $authHeader);
+        $jwt = $arr[1] ?? null;
+    }
+
+    if($jwt){
+        try {
+            $decoded = JWT::decode($jwt, new Key($secret_key, 'HS256'));
+            $data = $decoded->data;
+            $role = $data->role;
+
+            if($role == 'admin') {
+                $table_name = 'users';
+                $query = "SELECT first_name, last_name, email, role FROM " . $table_name;
+                $stmt = $dbConnection->prepare( $query );
+                $stmt->execute();
+                $result = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+
+                http_response_code(200);
+                echo json_encode(array(
+                    "message" => "Access granted",
+                    "data" => $result
+                ));
+            }
+            else {
+                http_response_code(401);
+                echo json_encode(array(
+                    "error" => [
+                        "code" => 401,
+                        "message" => "Access Denied",
+                    ]
+                ));
+            }
+        }catch (Exception $e){
+            http_response_code(401);
+            echo json_encode(array(
+                "error" => [
+                    "code" => 401,
+                    "message" => $e->getMessage()
+                ]
+            ));
+        }
+    }
+?>
+\end{lstlisting}
+
+\par Potongan kode yang berubah (fokus pada pembacaan header \texttt{Authorization}) ditunjukkan pada Kode \ref{lst:users-change-snippet}.
+
+\begin{lstlisting}[caption={Potongan perubahan pembacaan JWT dari header Authorization}, label={lst:users-change-snippet}]
+/* Kode lama */
+$authHeader = $_SERVER['HTTP_AUTHORIZATION'];
+$arr = explode(" ", $authHeader);
+$jwt = $arr[1];
+
+/* Kode baru */
+$authHeader = null;
+
+if (isset($_SERVER['HTTP_AUTHORIZATION'])) {
+    $authHeader = $_SERVER['HTTP_AUTHORIZATION'];
+} elseif (isset($_SERVER['REDIRECT_HTTP_AUTHORIZATION'])) {
+    $authHeader = $_SERVER['REDIRECT_HTTP_AUTHORIZATION'];
+} elseif (function_exists('getallheaders')) {
+    $headers = getallheaders();
+    if (isset($headers['Authorization'])) {
+        $authHeader = $headers['Authorization'];
+    }
+}
+
+if ($authHeader) {
+    $arr = explode(" ", $authHeader);
+    $jwt = $arr[1] ?? null;
+}
+\end{lstlisting}
+
+\subsubsection{Konfigurasi \texttt{.htaccess} (Kode Baru)}
+\par Selain perubahan di sisi PHP, saya menambahkan \texttt{.htaccess} untuk meneruskan header \texttt{Authorization} ke environment variable \texttt{HTTP\_AUTHORIZATION}. Konfigurasi tersebut ditunjukkan pada Kode \ref{lst:htaccess-auth}.
+
+\begin{lstlisting}[caption={Konfigurasi \texttt{.htaccess} untuk meneruskan header Authorization}, label={lst:htaccess-auth}]
+RewriteEngine On
+RewriteCond %{HTTP:Authorization} .
+RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^(.*)$ index.php/$1 [L]
+\end{lstlisting}
+
+\subsection{Pengujian Otorisasi Berdasarkan Role}
+\par Setelah pembacaan header \texttt{Authorization} berhasil, langkah berikutnya adalah membuktikan bahwa \textit{authorization} berjalan sesuai role yang tertanam pada token. Pada endpoint \texttt{/api/users/index.php}, backend hanya memberikan akses ketika \texttt{role=admin} dan menolak akses untuk role lainnya.
+
+\subsubsection{Uji Role \texttt{user}}
+\par Saya membuat akun baru dengan role \texttt{user} (Gambar \ref{fig:p8-15-register-user}), kemudian melakukan login untuk mendapatkan token (Gambar \ref{fig:p8-16-login-user}). Ketika token tersebut digunakan untuk mengakses \texttt{Get All Users}, server menolak akses dan memberikan response \texttt{Access Denied} (Gambar \ref{fig:p8-17-get-users-user-denied}).
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{resource/dokumentasi/15 - role jadi token.png}
+  \caption{Register akun dengan \texttt{role=user}}
+  \label{fig:p8-15-register-user}
+\end{figure}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{resource/dokumentasi/16 - login role yang itu.png}
+  \caption{Login akun role \texttt{user} dan mendapatkan token JWT}
+  \label{fig:p8-16-login-user}
+\end{figure}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{resource/dokumentasi/17 - role user get data.png}
+  \caption{Role \texttt{user} ditolak ketika mengakses endpoint \texttt{Get All Users}}
+  \label{fig:p8-17-get-users-user-denied}
+\end{figure}
+
+\subsubsection{Uji Role Lain (Contoh: \texttt{userss})}
+\par Saya juga mencoba membuat role selain \texttt{admin} dan \texttt{user}, yaitu \texttt{userss}. Proses register ditunjukkan pada Gambar \ref{fig:p8-18-register-userss}, login untuk mendapatkan token ditunjukkan pada Gambar \ref{fig:p8-21-login-userss}, dan hasil akses \texttt{Get All Users} yang ditolak ditunjukkan pada Gambar \ref{fig:p8-22-get-users-userss-denied}.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{resource/dokumentasi/18 - role selain user dan admin.png}
+  \caption{Register akun dengan role selain \texttt{admin/user} (contoh: \texttt{userss})}
+  \label{fig:p8-18-register-userss}
+\end{figure}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{resource/dokumentasi/21 - login userss.png}
+  \caption{Login akun role \texttt{userss} dan mendapatkan token JWT}
+  \label{fig:p8-21-login-userss}
+\end{figure}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{resource/dokumentasi/22 - userss get data.png}
+  \caption{Role \texttt{userss} ditolak ketika mengakses endpoint \texttt{Get All Users}}
+  \label{fig:p8-22-get-users-userss-denied}
+\end{figure}
+
+\subsection{Verifikasi Data pada phpMyAdmin}
+\par Setelah melakukan beberapa kali register, saya memverifikasi bahwa data benar-benar tersimpan di tabel \texttt{users} menggunakan phpMyAdmin. Pada proses ini saya sempat melakukan koreksi email karena kesalahan input awal (Gambar \ref{fig:p8-19-update-email}). Setelah diperbarui, tampilan akhir isi tabel \texttt{users} ditunjukkan pada Gambar \ref{fig:p8-20-final-table}.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{resource/dokumentasi/19 - ubah email karena lupa.png}
+  \caption{Perbaikan data (contoh: mengubah email) melalui phpMyAdmin}
+  \label{fig:p8-19-update-email}
+\end{figure}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{resource/dokumentasi/20 - jadinya ini.png}
+  \caption{Isi tabel \texttt{users} setelah dilakukan register beberapa akun}
+  \label{fig:p8-20-final-table}
+\end{figure}
+
+\subsection{Dokumentasi Request dari \texttt{pack hoppscotch.json}}
+\par Pada praktikum ini saya menyimpan collection Hoppscotch dalam file \texttt{pack hoppscotch.json} (folder \path{resource}). Isi file tersebut mendokumentasikan 4 request utama yang digunakan saat pengujian:
+\begin{enumerate}
+  \item \textbf{Cek} (GET): endpoint \texttt{<<link>>} untuk memastikan API aktif.
+  \item \textbf{Register} (POST): endpoint \texttt{<<link>>/api/register/index.php} dengan body JSON (\texttt{first\_name}, \texttt{last\_name}, \texttt{email}, \texttt{password}, \texttt{role}).
+  \item \textbf{Login} (POST): endpoint \texttt{<<link>>/api/login/index.php} untuk mendapatkan \texttt{jwt}, serta memiliki post-request script untuk menyimpan token ke environment variable \texttt{jwt}.
+  \item \textbf{Get All Users} (GET): endpoint \texttt{<<link>>/api/users/index.php} dengan \textit{Authorization Type} \texttt{Bearer} dan token \texttt{<<jwt>>}.
+\end{enumerate}
+
+\par Cuplikan dokumentasi file \texttt{pack hoppscotch.json} ditunjukkan pada Kode \ref{lst:hoppscotch-pack}.
+
+\begin{lstlisting}[caption={Cuplikan isi file \texttt{pack hoppscotch.json} (Hoppscotch export)}, label={lst:hoppscotch-pack}]
+{
+  "name": "Pertemuan 8",
+  "requests": [
+    {
+      "name": "Cek",
+      "method": "GET",
+      "endpoint": "<<link>>"
+    },
+    {
+      "name": "Register",
+      "method": "POST",
+      "endpoint": "<<link>>/api/register/index.php",
+      "body": {
+        "contentType": "application/json"
+      }
+    },
+    {
+      "name": "Login",
+      "method": "POST",
+      "endpoint": "<<link>>/api/login/index.php",
+      "testScript": "... pw.env.set(\"jwt\", jwt);"
+    },
+    {
+      "name": "Get All Users",
+      "method": "GET",
+      "endpoint": "<<link>>/api/users/index.php",
+      "auth": {
+        "authType": "bearer",
+        "token": "<<jwt>>"
+      }
+    }
+  ]
+}
+\end{lstlisting}
+
 \section{Kesimpulan}
+
+\par Kesimpulan dari praktikum \textit{API Authentication} menggunakan JWT adalah sebagai berikut:
+\begin{enumerate}
+  \item Backend API berbasis PHP berhasil dihubungkan ke database MySQL setelah melakukan penyesuaian konfigurasi koneksi pada file \texttt{config/database.php}.
+  \item Import file \texttt{php\_jwt\_db.sql} melalui phpMyAdmin berhasil membuat tabel \texttt{users} dan dapat diverifikasi melalui tampilan \textit{browse} pada phpMyAdmin.
+  \item Endpoint \texttt{Register} dan \texttt{Login} berhasil diuji menggunakan Hoppscotch. Endpoint \texttt{Login} mengembalikan token JWT yang kemudian dipakai untuk mengakses endpoint yang dilindungi.
+  \item Hoppscotch mempermudah pengujian karena dapat menyimpan base URL pada environment variable \texttt{link} dan menyimpan token pada variable \texttt{jwt} melalui post-request script.
+  \item Terjadi kendala saat header \texttt{Authorization} tidak terbaca di sisi server, sehingga endpoint \texttt{Get All Users} mengembalikan \texttt{401 Unauthorized}. Masalah ini diselesaikan dengan membuat pembacaan header lebih robust (fallback \texttt{HTTP\_AUTHORIZATION}/\texttt{REDIRECT\_HTTP\_AUTHORIZATION}/\texttt{getallheaders()}) serta menambahkan aturan \texttt{.htaccess} untuk meneruskan header.
+  \item Otorisasi berbasis role berjalan sesuai desain: hanya token dengan \texttt{role=admin} yang dapat mengakses \texttt{Get All Users}, sedangkan role \texttt{user} atau role lain (mis. \texttt{userss}) ditolak dengan response \texttt{Access Denied}.
+\end{enumerate}
 
 \section{Daftar Pustaka}
 \printbibliography[heading=none]
