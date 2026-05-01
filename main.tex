@@ -255,27 +255,20 @@ Dosen Pengampu & : & \DosenPengampu \\
   \item Menguji endpoint \texttt{Cek}, \texttt{Register}, \texttt{Login}, dan \texttt{Get All Users}.
   \item Melakukan \textit{debugging} token JWT menggunakan \url{https://jwt.io} untuk melihat payload (termasuk \texttt{role}).
   \item Melakukan troubleshooting saat header \texttt{Authorization} tidak terbaca, lalu memperbaiki kode (disimpan sebagai \textbf{kode baru}).
-  \item Menguji kembali akses berdasarkan \texttt{role} (admin vs user vs role lain) untuk verifikasi otorisasi.
+  \item Mengerjakan Tugas \& Analisis (lihat bagian "Tugas \& Analisis"). \begin{enumerate}
+    \item Apa yang terjadi ketika melakukan request akses data user menggunakan akun dengan role admin dan jwt token yang valid?
+    \item Apa yang terjadi ketika melakukan request akses data user menggunakan akun dengan role admin dan jwt token yang tidak valid?
+    \item Apa yang terjadi jika akun dengan role user biasa (bukan admin) mengakses data user?
+    \item Apa yang terjadi jika melakukan register dengan menginput role selain admin dan user biasa?
+    \item Apa yang terjadi jika akun dengan role selain admin dan user biasa mengakses data user?
+  \end{enumerate}
 \end{enumerate}
 
-\subsection{Alat dan Bahan}
-\par Mengacu pada modul praktikum, alat dan bahan yang digunakan pada pertemuan ini adalah:
-\begin{enumerate}
-  \item Komputer/ laptop untuk menjalankan browser dan editor.
-  \item Server web (Apache/Nginx) + PHP untuk menjalankan aplikasi JWT.
-  \item MySQL sebagai database.
-  \item phpMyAdmin untuk mempermudah impor dan verifikasi database.
-  \item Hoppscotch sebagai alat dokumentasi dan pengujian REST API (alternatif Postman).
-  \item Visual Studio Code untuk melihat dan mengubah source code.
-  \item Git untuk mengambil source code awal (repository contoh).
-\end{enumerate}
-
-\subsection{Menyiapkan Source Code (Kode Lama)}
-\par Langkah pertama adalah menyiapkan source code aplikasi contoh JWT dengan melakukan \textit{clone} repository. Untuk memudahkan dokumentasi perubahan, saya memisahkan versi source code menjadi dua:
-\begin{enumerate}
-  \item \textbf{Kode lama}: source code hasil clone awal (folder \path{resource/kode lama}).
-  \item \textbf{Kode baru}: source code setelah dilakukan perbaikan untuk menangani error pembacaan header \texttt{Authorization} (folder \path{resource/kode baru}).
-\end{enumerate}
+\subsection{Menyiapkan Source Code}
+\par Langkah pertama adalah menyiapkan source code aplikasi contoh JWT dengan melakukan \textit{clone} repository \ref{lst:clone-repo} di terminal server VPS. Repository ini berisi implementasi REST API dengan JWT untuk autentikasi, termasuk endpoint untuk register, login, dan akses data user yang dilindungi berdasarkan role.
+\begin{lstlisting}[caption={Perintah untuk meng-clone repository contoh JWT}, label={lst:clone-repo}]
+  git clone https://github.com/hananhanafi/php-jwt-example.git
+\end{lstlisting}
 
 \par Proses penyiapan source code serta pengecekan awal file konfigurasi database ditunjukkan pada Gambar \ref{fig:p8-01-clone-config}.
 
@@ -287,9 +280,9 @@ Dosen Pengampu & : & \DosenPengampu \\
 \end{figure}
 
 \subsection{Konfigurasi Koneksi Database MySQL}
-\par Setelah source code siap, saya menyesuaikan konfigurasi koneksi database pada file \texttt{config/database.php}. Pada \textbf{kode lama}, konfigurasi database masih menggunakan database \texttt{php\_jwt\_db} dan akun \texttt{root}. Pada \textbf{kode baru}, konfigurasi tersebut saya sesuaikan dengan database yang digunakan pada server, yaitu \texttt{sait\_db} serta user database yang tersedia.
+\par Setelah source codenya siap, saya menyesuaikan file konfigurasi koneksi database pada file \texttt{config/database.php}. Pada \textbf{kode lama}, konfigurasi database masih menggunakan database \texttt{php\_jwt\_db} dan akun \texttt{root}. Pada \textbf{kode baru}, konfigurasi tersebut saya sesuaikan dengan database yang digunakan pada server, yaitu \texttt{sait\_db} serta user database yang tersedia.
 
-\par Cuplikan konfigurasi database pada \textbf{kode baru} ditunjukkan pada Kode \ref{lst:db-config-new}.
+\par Cuplikan konfigurasi database pada \textbf{kode baru} ditunjukkan pada Kode \ref{lst:db-config-new} dibawah ini.
 
 \begin{lstlisting}[caption={Konfigurasi koneksi database pada kode baru (\texttt{config/database.php})}, label={lst:db-config-new}]
 <?php
@@ -386,7 +379,7 @@ class DatabaseService{
   \label{fig:p8-08-login-admin}
 \end{figure}
 
-\par Mekanisme pembentukan JWT dilakukan pada endpoint \texttt{api/login/index.php} dengan menyusun \textit{claims} (\texttt{iss}, \texttt{aud}, \texttt{iat}, \texttt{exp}) dan \textit{payload} \texttt{data} (termasuk \texttt{role}), lalu dienkode menggunakan algoritma \texttt{HS256}. Cuplikan implementasi login ditunjukkan pada Kode \ref{lst:login-encode}.
+\par Mekanisme pembentukan JWT dilakukan pada endpoint \texttt{api/login/index.php} dengan cara menyusun \textit{claims} (\texttt{iss}, \texttt{aud}, \texttt{iat}, \texttt{exp}) dan \textit{payload} \texttt{data} (termasuk \texttt{role}), lalu dienkode menggunakan algoritma \texttt{HS256}. Cuplikan implementasi login ditunjukkan pada Kode \ref{lst:login-encode}.
 
 \begin{lstlisting}[caption={Cuplikan pembuatan JWT pada endpoint login (\texttt{api/login/index.php})}, label={lst:login-encode}]
 // ...
@@ -428,7 +421,7 @@ pw.env.set("jwt", jwt);
 \end{lstlisting}
 
 \subsubsection{Request \texttt{Get All Users} (GET) dengan Bearer Token}
-\par Endpoint \texttt{Get All Users} mengharuskan client mengirim bearer token di header \texttt{Authorization}. Setelah token disimpan sebagai environment variable, saya menguji request ini dengan menggunakan token \texttt{<<jwt>>}. Hasil pengujian saat token valid dan role adalah \texttt{admin} ditunjukkan pada Gambar \ref{fig:p8-12-get-users-admin}.
+\par Endpoint \texttt{Get All Users} mengharuskan client mengirim bearer token di header dengan nama \texttt{Authorization}. Setelah token disimpan sebagai environment variable, saya menguji request ini dengan menggunakan token \texttt{<<jwt>>}. Hasil pengujian saat token valid dan role adalah \texttt{admin} ditunjukkan pada Gambar \ref{fig:p8-12-get-users-admin}.
 
 \begin{figure}[H]
   \centering
@@ -448,7 +441,7 @@ pw.env.set("jwt", jwt);
 \end{figure}
 
 \subsection{Troubleshooting: Header \texttt{Authorization} Tidak Terbaca}
-\par Pada percobaan awal, request \texttt{Get All Users} sempat gagal dengan status \texttt{401 Unauthorized}. Salah satu error yang muncul adalah \texttt{"Syntax error, malformed JSON"} (Gambar \ref{fig:p8-14-error-malformed}). Kondisi ini mengindikasikan token yang diterima server tidak valid (misalnya token kosong/terpotong) atau header \texttt{Authorization} tidak terbaca oleh PHP.
+\par Pada percobaan ini, request \texttt{Get All Users} sempat gagal dengan status \texttt{401 Unauthorized}. Salah satu error yang muncul adalah \texttt{"Syntax error, malformed JSON"} (Gambar \ref{fig:p8-14-error-malformed}). Kondisi ini mengindikasikan token yang diterima server tidak valid (misalnya token kosong/terpotong) atau header \texttt{Authorization} tidak terbaca oleh PHP.
 
 \begin{figure}[H]
   \centering
@@ -457,19 +450,10 @@ pw.env.set("jwt", jwt);
   \label{fig:p8-14-error-malformed}
 \end{figure}
 
-\par Selain itu, saya juga melakukan percobaan \textit{tampering} token dengan menghapus satu karakter pada environment variable \texttt{jwt} (Gambar \ref{fig:p8-13-token-tamper}). Percobaan ini bertujuan memastikan bahwa perubahan sekecil apa pun pada token akan membuat signature tidak valid sehingga akses ditolak.
-
-\begin{figure}[H]
-  \centering
-  \includegraphics[width=0.95\textwidth]{resource/dokumentasi/13 - hapus 1 huruf token.png}
-  \caption{Percobaan mengubah token (hapus satu karakter) pada environment Hoppscotch}
-  \label{fig:p8-13-token-tamper}
-\end{figure}
-
-\par Akar masalah yang saya temui adalah pembacaan header \texttt{Authorization} pada \textbf{kode lama} masih terlalu bergantung pada \texttt{HTTP\_AUTHORIZATION} di \texttt{\$\_SERVER}. Pada beberapa konfigurasi server Apache/PHP, header \texttt{Authorization} tidak otomatis diteruskan ke \texttt{\$\_SERVER} sehingga value menjadi kosong dan token tidak terbaca.
+\par Akar masalah yang saya temui adalah pembacaan header \texttt{Authorization} pada \textbf{Kode} masih terlalu bergantung pada \texttt{HTTP\_AUTHORIZATION} di \texttt{\$\_SERVER}. Pada beberapa konfigurasi server Apache/PHP, header \texttt{Authorization} tidak otomatis diteruskan ke \texttt{\$\_SERVER} sehingga value menjadi kosong dan token tidak terbaca.
 
 \subsubsection{Kode Lama Endpoint Users (Sebelum Perbaikan)}
-\par Implementasi \textbf{kode lama} pada endpoint \texttt{/api/users/index.php} mengambil JWT langsung dari \texttt{\$\_SERVER['HTTP\_AUTHORIZATION']}. Implementasi tersebut ditunjukkan pada Kode \ref{lst:users-old}.
+\par Implementasi di \textbf{kode lama} pada endpoint \texttt{/api/users/index.php} mengambil JWT langsung dari \texttt{\$\_SERVER['HTTP\_AUTHORIZATION']}. Implementasi tersebut ditunjukkan pada Kode \ref{lst:users-old}.
 
 \begin{lstlisting}[caption={Kode lama endpoint \texttt{/api/users/index.php} (pembacaan Authorization belum robust)}, label={lst:users-old}]
 <?php
@@ -536,7 +520,7 @@ pw.env.set("jwt", jwt);
 \subsubsection{Perbaikan: Membaca Authorization dari Beberapa Sumber}\label{subsubsec:p8-fix-auth}
 \par Solusi yang saya lakukan pada \textbf{kode baru} adalah:
 \begin{enumerate}
-  \item Menambahkan fallback pembacaan header dari beberapa kemungkinan sumber, yaitu \texttt{HTTP\_AUTHORIZATION}, \texttt{REDIRECT\_HTTP\_AUTHORIZATION}, dan fungsi \texttt{getallheaders()}.
+  \item Menambahkan fallback pembacaan header dari beberapa kemungkinan sumber, yaitu kemungkinan dari \texttt{HTTP\_AUTHORIZATION}, \texttt{REDIRECT\_HTTP\_AUTHORIZATION}, dan juga fungsi \texttt{getallheaders()}.
   \item Menambahkan konfigurasi \texttt{.htaccess} untuk meneruskan header \texttt{Authorization} menjadi environment variable \texttt{HTTP\_AUTHORIZATION}.
 \end{enumerate}
 
@@ -668,6 +652,15 @@ RewriteRule ^(.*)$ index.php/$1 [L]
 \end{lstlisting}
 
 \subsection{Pengujian Otorisasi Berdasarkan Role}
+\par Selain itu, saya juga melakukan percobaan \textit{tampering} token dengan menghapus satu karakter pada environment variable \texttt{jwt} (Gambar \ref{fig:p8-13-token-tamper}). Percobaan ini bertujuan memastikan bahwa perubahan sekecil apa pun pada token akan membuat signature tidak valid sehingga akses ditolak.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{resource/dokumentasi/13 - hapus 1 huruf token.png}
+  \caption{Percobaan mengubah token (hapus satu karakter) pada environment Hoppscotch}
+  \label{fig:p8-13-token-tamper}
+\end{figure}
+
 \par Setelah pembacaan header \texttt{Authorization} berhasil, langkah berikutnya adalah membuktikan bahwa \textit{authorization} berjalan sesuai role yang tertanam pada token. Pada endpoint \texttt{/api/users/index.php}, backend hanya memberikan akses ketika \texttt{role=admin} dan menolak akses untuk role lainnya.
 
 \subsubsection{Uji Role \texttt{user}}
@@ -736,7 +729,7 @@ RewriteRule ^(.*)$ index.php/$1 [L]
 \end{figure}
 
 \subsection{Dokumentasi Request dari \texttt{pack hoppscotch.json}}
-\par Pada praktikum ini saya menyimpan collection Hoppscotch dalam file \texttt{pack hoppscotch.json} (folder \path{resource}). Isi file tersebut mendokumentasikan 4 request utama yang digunakan saat pengujian:
+\par Pada praktikum ini saya menyimpan collection Hoppscotch dalam file \texttt{pack hoppscotch.json}. Isi file tersebut mendokumentasikan 4 request utama yang digunakan saat pengujian:
 \begin{enumerate}
   \item \textbf{Cek} (GET): endpoint \texttt{<<link>>} untuk memastikan API aktif.
   \item \textbf{Register} (POST): endpoint \texttt{<<link>>/api/register/index.php} dengan body JSON (\texttt{first\_name}, \texttt{last\_name}, \texttt{email}, \texttt{password}, \texttt{role}).
