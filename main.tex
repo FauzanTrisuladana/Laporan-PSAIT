@@ -227,7 +227,19 @@ Dosen Pengampu & : & \DosenPengampu \\
 
 \subsection{API Authentication}
 
+\par \textit{API authentication} adalah proses untuk memverifikasi identitas pihak yang melakukan request ke sebuah API, sehingga server dapat memastikan bahwa request benar-benar berasal dari pengguna atau client yang sah. Pada praktiknya, autentikasi pada REST API umumnya tidak menggunakan sesi yang disimpan di server (\textit{stateless}), melainkan menggunakan kredensial yang dikirim pada setiap request melalui header HTTP.
+
+\par Salah satu pendekatan yang banyak digunakan adalah autentikasi berbasis token, di mana server mengeluarkan token setelah proses login berhasil, lalu token tersebut digunakan kembali pada request berikutnya. Token akan menjadi bukti autentikasi, sedangkan aturan akses (misalnya berdasarkan role) dapat diterapkan sebagai bagian dari proses otorisasi setelah token diverifikasi.
+
+\par JSON Web Token (JWT) merupakan standar token berbasis JSON yang bersifat ringkas dan aman untuk ditransmisikan, serta digunakan untuk merepresentasikan klaim (\textit{claims}) antar pihak. JWT umumnya memiliki tiga bagian utama, yaitu \textit{header}, \textit{payload}, dan \textit{signature} (format \texttt{header.payload.signature}). Signature digunakan untuk memastikan integritas token, sehingga payload tidak dapat diubah tanpa mengetahui kunci penandatanganan \cite{rfc7519-jwt}.
+
+\par Dalam konteks HTTP, JWT sering dikirim sebagai \textit{bearer token} menggunakan header dengan nama \texttt{Authorization} dengan skema \texttt{Bearer}. Skema bearer token ini didefinisikan pada RFC 6750 dan menjadi pola umum pada layanan API modern karena sederhana dan sesuai untuk request yang \textit{stateless} \cite{rfc6750-bearer}. Dengan mekanisme ini, server dapat memverifikasi signature JWT, membaca klaim yang diperlukan (misalnya \texttt{id} dan \texttt{role}), lalu menentukan apakah request berhak mengakses endpoint tertentu. JWT juga biasanya memiliki masa berlaku (misalnya klaim \texttt{exp}) untuk membatasi risiko penyalahgunaan token \cite{rfc7519-jwt}.
+
 \subsection{Hoppscotch API Documentation Tool}
+
+\par Hoppscotch adalah \textit{API development ecosystem} berbasis web yang dapat digunakan untuk menguji dan mendokumentasikan endpoint API. Tool ini memudahkan pengguna dalam menyusun request (method, URL, header, dan body), melihat response (status code, header, dan payload JSON), serta melakukan iterasi pengujian dengan cepat \cite{hoppscotch-docs}.
+
+\par Dalam pengujian REST API, Hoppscotch menyediakan fitur \textit{collections} untuk mengelompokkan request, \textit{environment variables} untuk menyimpan nilai yang sering dipakai (contoh: \textit{base URL} dan token), serta dukungan skrip (\textit{pre/post-request}) untuk otomatisasi sederhana seperti menyimpan token dari response login. Selain itu, request yang sudah disusun dapat diekspor sebagai file JSON sehingga pengujian dan dokumentasi dapat direplikasi secara konsisten \cite{hoppscotch-docs,hoppscotch-github}.
 
 %contoh gambar dan kode
 % \begin{figure}[H]
@@ -651,8 +663,14 @@ RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^(.*)$ index.php/$1 [L]
 \end{lstlisting}
 
-\subsection{Pengujian Otorisasi Berdasarkan Role}
-\par Selain itu, saya juga melakukan percobaan \textit{tampering} token dengan menghapus satu karakter pada environment variable \texttt{jwt} (Gambar \ref{fig:p8-13-token-tamper}). Percobaan ini bertujuan memastikan bahwa perubahan sekecil apa pun pada token akan membuat signature tidak valid sehingga akses ditolak.
+\subsection{Tugas \& Analisis}
+\par Bagian ini merupakan pengerjaan tugas dan analisis berdasarkan instruksi praktikum. Setelah perbaikan pembacaan header \texttt{Authorization} berhasil, saya menguji beberapa skenario token dan role untuk melihat respons server pada endpoint \texttt{Get All Users}. Setiap soal berikut dijawab berdasarkan hasil pengujian dan dokumentasi gambar.
+
+\subsubsection{Apa yang terjadi ketika melakukan request akses data user menggunakan akun dengan role admin dan jwt token yang valid?}
+\par Ketika melakukan request \texttt{Get All Users} menggunakan akun dengan \texttt{role=admin} dan token JWT yang valid, server memberikan akses dan mengembalikan data user dengan respons \texttt{200 OK} dan pesan \texttt{"Access granted"}. Hasil pengujian ini ditunjukkan pada Gambar \ref{fig:p8-12-get-users-admin}.
+
+\subsubsection{Apa yang terjadi ketika melakukan request akses data user menggunakan akun dengan role admin dan jwt token yang tidak valid?}
+\par Ketika token JWT tidak valid (misalnya signature berubah karena token dimodifikasi), server menolak akses dan mengembalikan respons \texttt{401 Unauthorized}. Untuk membuktikan hal ini, saya melakukan \textit{tampering} token dengan menghapus satu karakter pada environment variable \texttt{jwt} (Gambar \ref{fig:p8-13-token-tamper}). Setelah token diubah, request kembali menghasilkan error seperti pada Gambar \ref{fig:p8-14-error-malformed}.
 
 \begin{figure}[H]
   \centering
@@ -661,10 +679,8 @@ RewriteRule ^(.*)$ index.php/$1 [L]
   \label{fig:p8-13-token-tamper}
 \end{figure}
 
-\par Setelah pembacaan header \texttt{Authorization} berhasil, langkah berikutnya adalah membuktikan bahwa \textit{authorization} berjalan sesuai role yang tertanam pada token. Pada endpoint \texttt{/api/users/index.php}, backend hanya memberikan akses ketika \texttt{role=admin} dan menolak akses untuk role lainnya.
-
-\subsubsection{Uji Role \texttt{user}}
-\par Saya membuat akun baru dengan role \texttt{user} (Gambar \ref{fig:p8-15-register-user}), kemudian melakukan login untuk mendapatkan token (Gambar \ref{fig:p8-16-login-user}). Ketika token tersebut digunakan untuk mengakses \texttt{Get All Users}, server menolak akses dan memberikan response \texttt{Access Denied} (Gambar \ref{fig:p8-17-get-users-user-denied}).
+\subsubsection{Apa yang terjadi jika akun dengan role user biasa (bukan admin) mengakses data user?}
+\par Jika akun memiliki \texttt{role=user}, maka meskipun token JWT valid, server tetap menolak akses karena endpoint \texttt{/api/users/index.php} hanya mengizinkan \texttt{role=admin}. Saya membuat akun role \texttt{user} (Gambar \ref{fig:p8-15-register-user}), lalu login untuk mendapatkan token (Gambar \ref{fig:p8-16-login-user}). Saat token tersebut digunakan untuk mengakses \texttt{Get All Users}, server memberikan response \texttt{"Access Denied"} (Gambar \ref{fig:p8-17-get-users-user-denied}).
 
 \begin{figure}[H]
   \centering
@@ -687,8 +703,8 @@ RewriteRule ^(.*)$ index.php/$1 [L]
   \label{fig:p8-17-get-users-user-denied}
 \end{figure}
 
-\subsubsection{Uji Role Lain (Contoh: \texttt{userss})}
-\par Saya juga mencoba membuat role selain \texttt{admin} dan \texttt{user}, yaitu \texttt{userss}. Proses register ditunjukkan pada Gambar \ref{fig:p8-18-register-userss}, login untuk mendapatkan token ditunjukkan pada Gambar \ref{fig:p8-21-login-userss}, dan hasil akses \texttt{Get All Users} yang ditolak ditunjukkan pada Gambar \ref{fig:p8-22-get-users-userss-denied}.
+\subsubsection{Apa yang terjadi jika melakukan register dengan menginput role selain admin dan user biasa?}
+\par Ketika melakukan register, field \texttt{role} pada body JSON dapat diisi selain \texttt{admin} dan \texttt{user} (contoh: \texttt{userss}). Proses register akun dengan role tersebut ditunjukkan pada Gambar \ref{fig:p8-18-register-userss}. Role ini kemudian ikut tersimpan sebagai data user dan akan terbawa pada token JWT saat login.
 
 \begin{figure}[H]
   \centering
@@ -696,6 +712,27 @@ RewriteRule ^(.*)$ index.php/$1 [L]
   \caption{Register akun dengan role selain \texttt{admin/user} (contoh: \texttt{userss})}
   \label{fig:p8-18-register-userss}
 \end{figure}
+
+\par Pada percobaan ini saya sempat lupa dan menggunakan email yang sudah dipakai sebelumnya pada akun lain. Jika email tidak unik, maka akun dengan role selain admin tersebut tidak dapat digunakan untuk login karena email yang sama sudah terdaftar. Oleh karena itu, saya melakukan perbaikan email melalui phpMyAdmin (Gambar \ref{fig:p8-19-update-email}).
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{resource/dokumentasi/19 - ubah email karena lupa.png}
+  \caption{Perbaikan data (contoh: mengubah email) melalui phpMyAdmin}
+  \label{fig:p8-19-update-email}
+\end{figure}
+
+\par Setelah email diperbarui, saya memverifikasi ulang isi tabel \texttt{users} untuk memastikan sudah tidak ada email yang sama. Hasil akhirnya ditunjukkan pada Gambar \ref{fig:p8-20-final-table}, terlihat bahwa email yang sebelumnya duplikat sudah terganti sehingga tiap akun memiliki email yang berbeda.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{resource/dokumentasi/20 - jadinya ini.png}
+  \caption{Isi tabel \texttt{users} setelah dilakukan register beberapa akun}
+  \label{fig:p8-20-final-table}
+\end{figure}
+
+\subsubsection{Apa yang terjadi jika akun dengan role selain admin dan user biasa mengakses data user?}
+\par Setelah akun dengan role selain \texttt{admin/user} berhasil digunakan untuk login (Gambar \ref{fig:p8-21-login-userss}), token JWT yang dihasilkan tetap ditolak ketika mengakses \texttt{Get All Users} karena role tidak memenuhi syarat otorisasi. Hasil akses yang ditolak ditunjukkan pada Gambar \ref{fig:p8-22-get-users-userss-denied}.
 
 \begin{figure}[H]
   \centering
@@ -711,28 +748,11 @@ RewriteRule ^(.*)$ index.php/$1 [L]
   \label{fig:p8-22-get-users-userss-denied}
 \end{figure}
 
-\subsection{Verifikasi Data pada phpMyAdmin}
-\par Setelah melakukan beberapa kali register, saya memverifikasi bahwa data benar-benar tersimpan di tabel \texttt{users} menggunakan phpMyAdmin. Pada proses ini saya sempat melakukan koreksi email karena kesalahan input awal (Gambar \ref{fig:p8-19-update-email}). Setelah diperbarui, tampilan akhir isi tabel \texttt{users} ditunjukkan pada Gambar \ref{fig:p8-20-final-table}.
-
-\begin{figure}[H]
-  \centering
-  \includegraphics[width=0.95\textwidth]{resource/dokumentasi/19 - ubah email karena lupa.png}
-  \caption{Perbaikan data (contoh: mengubah email) melalui phpMyAdmin}
-  \label{fig:p8-19-update-email}
-\end{figure}
-
-\begin{figure}[H]
-  \centering
-  \includegraphics[width=0.95\textwidth]{resource/dokumentasi/20 - jadinya ini.png}
-  \caption{Isi tabel \texttt{users} setelah dilakukan register beberapa akun}
-  \label{fig:p8-20-final-table}
-\end{figure}
-
 \subsection{Dokumentasi Request dari \texttt{pack hoppscotch.json}}
-\par Pada praktikum ini saya menyimpan collection Hoppscotch dalam file \texttt{pack hoppscotch.json}. Isi file tersebut mendokumentasikan 4 request utama yang digunakan saat pengujian:
+\par Pada praktikum ini saya \textit{export} collection Hoppscotch dalam file \texttt{pack hoppscotch.json}. Isi file tersebut mendokumentasikan 4 request utama yang digunakan saat pengujian:
 \begin{enumerate}
   \item \textbf{Cek} (GET): endpoint \texttt{<<link>>} untuk memastikan API aktif.
-  \item \textbf{Register} (POST): endpoint \texttt{<<link>>/api/register/index.php} dengan body JSON (\texttt{first\_name}, \texttt{last\_name}, \texttt{email}, \texttt{password}, \texttt{role}).
+  \item \textbf{Register} (POST): endpoint \texttt{<<link>>/api/register/index.php} dengan body JSON yang isinya(\texttt{first\_name}, \texttt{last\_name}, \texttt{email}, \texttt{password}, \texttt{role}).
   \item \textbf{Login} (POST): endpoint \texttt{<<link>>/api/login/index.php} untuk mendapatkan \texttt{jwt}, serta memiliki post-request script untuk menyimpan token ke environment variable \texttt{jwt}.
   \item \textbf{Get All Users} (GET): endpoint \texttt{<<link>>/api/users/index.php} dengan \textit{Authorization Type} \texttt{Bearer} dan token \texttt{<<jwt>>}.
 \end{enumerate}
@@ -783,7 +803,7 @@ RewriteRule ^(.*)$ index.php/$1 [L]
   \item Import file \texttt{php\_jwt\_db.sql} melalui phpMyAdmin berhasil membuat tabel \texttt{users} dan dapat diverifikasi melalui tampilan \textit{browse} pada phpMyAdmin.
   \item Endpoint \texttt{Register} dan \texttt{Login} berhasil diuji menggunakan Hoppscotch. Endpoint \texttt{Login} mengembalikan token JWT yang kemudian dipakai untuk mengakses endpoint yang dilindungi.
   \item Hoppscotch mempermudah pengujian karena dapat menyimpan base URL pada environment variable \texttt{link} dan menyimpan token pada variable \texttt{jwt} melalui post-request script.
-  \item Terjadi kendala saat header \texttt{Authorization} tidak terbaca di sisi server, sehingga endpoint \texttt{Get All Users} mengembalikan \texttt{401 Unauthorized}. Masalah ini diselesaikan dengan membuat pembacaan header lebih robust (fallback \texttt{HTTP\_AUTHORIZATION}/\texttt{REDIRECT\_HTTP\_AUTHORIZATION}/\texttt{getallheaders()}) serta menambahkan aturan \texttt{.htaccess} untuk meneruskan header.
+  \item Terjadi kendala saat header \texttt{Authorization} tidak terbaca di sisi server, sehingga endpoint \texttt{Get All Users} mengembalikan \texttt{401 Unauthorized}. Masalah ini diselesaikan dengan membuat pembacaan header lebih robust (fallback ke \texttt{HTTP\_AUTHORIZATION} atau jika masih tidak bisa ke \texttt{REDIRECT\_HTTP\_AUTHORIZATION} dan kalau masih tidak bisa maka ke \texttt{getallheaders()}) serta menambahkan aturan \texttt{.htaccess} untuk meneruskan header.
   \item Otorisasi berbasis role berjalan sesuai desain: hanya token dengan \texttt{role=admin} yang dapat mengakses \texttt{Get All Users}, sedangkan role \texttt{user} atau role lain (mis. \texttt{userss}) ditolak dengan response \texttt{Access Denied}.
 \end{enumerate}
 
