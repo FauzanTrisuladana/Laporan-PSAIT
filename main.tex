@@ -242,6 +242,16 @@ Dosen Pengampu & : & \DosenPengampu \\
 
 \subsection{Docker}
 
+\par Docker adalah platform \textit{containerization} yang digunakan untuk mengembangkan, mengirim, dan menjalankan aplikasi di dalam lingkungan terisolasi yang disebut \textit{container}. Berbeda dengan pendekatan virtualisasi tradisional yang menggunakan \textit{virtual machine} (VM), Docker memanfaatkan teknologi virtualisasi tingkat sistem operasi sehingga container dapat berjalan lebih ringan, cepat, dan efisien dalam penggunaan sumber daya \cite{docker-docs}.
+
+\par Pada arsitekturnya, Docker terdiri dari beberapa komponen utama, yaitu \textit{Docker Engine} sebagai layanan utama yang mengelola container, \textit{Docker Image} sebagai template read-only untuk membuat container, serta \textit{Docker Container} sebagai instansi yang berjalan dari sebuah image. Image biasanya dibangun menggunakan berkas \texttt{Dockerfile} yang berisi instruksi untuk menyusun lingkungan aplikasi, seperti sistem operasi dasar, dependensi, serta konfigurasi yang diperlukan \cite{docker-docs}.
+
+\par Salah satu keunggulan utama Docker adalah portabilitas, di mana aplikasi yang telah dikemas dalam container dapat dijalankan secara konsisten di berbagai lingkungan, baik pada komputer lokal, server, maupun layanan cloud tanpa perlu konfigurasi ulang yang kompleks. Hal ini dimungkinkan karena seluruh dependensi aplikasi telah dibungkus dalam container tersebut \cite{docker-docs}.
+
+\par Selain itu, Docker mendukung konsep \textit{image layering} dan \textit{caching} yang membuat proses build menjadi lebih efisien, serta memudahkan distribusi melalui \textit{container registry} seperti Docker Hub. Dalam praktik pengembangan modern, Docker sering digunakan bersama dengan alat orkestrasi seperti Kubernetes untuk mengelola deployment aplikasi dalam skala besar \cite{docker-docs}.
+
+\par Dalam konteks praktikum ini, Docker digunakan untuk menjalankan layanan backend dan database secara terisolasi di dalam container pada VPS. Dengan pendekatan ini, proses instalasi, konfigurasi, dan deployment menjadi lebih sederhana serta mengurangi potensi konflik dependensi antar aplikasi.
+
 %contoh gambar dan kode
 % \begin{figure}[H]
 %     \centering
@@ -257,7 +267,573 @@ Dosen Pengampu & : & \DosenPengampu \\
 
 \section{Hasil dan Pembahasan}
 
+\par Pada pertemuan ini saya melakukan implementasi \textit{deployment} REST API berbasis PHP (JWT) menggunakan Docker pada server VPS. Alur praktikum mengikuti urutan pada modul (bagian Langkah Percobaan), dimulai dari mengecek dokumentasi resmi Docker, menginstal Docker Engine, menyiapkan folder kerja dan \textit{source code}, melakukan penyesuaian konfigurasi aplikasi agar siap dijalankan melalui Apache di dalam container, membangun Docker Image, menjalankan container, hingga menguji endpoint REST API menggunakan Hoppscotch. Selain itu, saya melakukan \textit{troubleshooting} saat koneksi MySQL dari container mengalami kegagalan, lalu memperbaiki akses user database agar dapat diakses dari jaringan. Pada akhir praktikum, saya juga mengerjakan Tugas \& Analisis yang diberikan (dibahas di bagian akhir Hasil dan Pembahasan).
+
+\par Secara ringkas, langkah yang saya lakukan adalah sebagai berikut:
+\begin{enumerate}
+  \item Mengecek dokumentasi resmi instalasi Docker Engine untuk Ubuntu.
+  \item Menginstal Docker Engine di VPS dan memverifikasi statusnya.
+  \item Menambahkan user non-root ke grup Docker agar dapat menjalankan Docker tanpa \texttt{sudo}.
+  \item Membuat folder baru di home directory dan menyalin \textit{source code} API JWT (kode lama).
+  \item Mengonfigurasi koneksi database MySQL pada file \texttt{config/database.php} (\textit{hardcode}, tanpa \texttt{.env}), agar lebih mudah.
+  \item Menjalankan aplikasi menggunakan PHP development server untuk memastikan API dapat diakses.
+  \item Mengubah environment Hoppscotch agar \textit{base URL} mengarah ke IP VPS, lalu menguji endpoint \texttt{Cek}.
+  \item Menambahkan konfigurasi \texttt{.htaccess} dan router \texttt{index.php} agar endpoint API dapat diakses dengan URL yang lebih rapi.
+  \item Memperbaiki path \texttt{include/require} menggunakan konstanta \texttt{\_\_DIR\_\_}.
+  \item Membuat \texttt{Dockerfile}, melakukan build image, dan menjalankan container pada port \texttt{8000}.
+  \item Menyesuaikan kembali base URL Hoppscotch agar sesuai dengan base path saat aplikasi berjalan di container.
+  \item Melakukan \textit{troubleshooting} koneksi MySQL dari container dengan menambahkan user ke database yang dapat diakses dari semua host.
+  \item Menguji endpoint \texttt{Login} dan \texttt{Get All Users} pada aplikasi yang berjalan di Docker.
+  \item Mengerjakan Tugas \& Analisis (dibahas di bagian akhir Hasil dan Pembahasan).
+\end{enumerate}
+
+\subsection{Mengecek Dokumentasi Resmi Docker}
+\par Sebelum melakukan instalasi, saya mengecek dokumentasi resmi Docker di \url{https://docs.docker.com/} untuk memastikan langkah instalasi sesuai dengan versi Ubuntu yang digunakan pada VPS. Dokumentasi yang saya buka adalah panduan \textit{Install Docker Engine on Ubuntu} (Gambar \ref{fig:p9-01-docker-docs}) dan bagian \textit{Install using the apt repository} (Gambar \ref{fig:p9-02-docker-docs-apt}).
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{resource/Dokumentasi/1 - cek dokumentasi.png}
+  \caption{Mengecek dokumentasi resmi Docker Engine untuk Ubuntu}
+  \label{fig:p9-01-docker-docs}
+\end{figure}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{resource/Dokumentasi/2 - dokumentasi cara menginstall docker.png}
+  \caption{Panduan instalasi Docker menggunakan repository \textit{apt}}
+  \label{fig:p9-02-docker-docs-apt}
+\end{figure}
+
+\subsection{Instalasi Docker Engine pada VPS}
+\par Setelah mengetahui langkah instalasi dari dokumentasi, saya menjalankan perintah instalasi Docker Engine pada Ubuntu VPS. Proses eksekusi perintah terlihat pada Gambar \ref{fig:p9-03-apt-update} sampai dengan Gambar \ref{fig:p9-06-install-docker-pkg}. Perintah yang dijalankan dirangkum pada Kode \ref{lst:docker-install}.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{resource/Dokumentasi/3 - menjalankan perintah di terminal.png}
+  \caption{Menjalankan \texttt{sudo apt update} pada VPS}
+  \label{fig:p9-03-apt-update}
+\end{figure}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{resource/Dokumentasi/4 - masih menjalankan perintah di terminal.png}
+  \caption{Menginstal dependensi awal (\texttt{ca-certificates} dan \texttt{curl}) serta menambahkan key Docker}
+  \label{fig:p9-04-install-deps}
+\end{figure}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{resource/Dokumentasi/5 - masih menjalankan perintah di terminal p2.png}
+  \caption{Menambahkan repository Docker ke \texttt{/etc/apt/sources.list.d/docker.sources}}
+  \label{fig:p9-05-add-repo}
+\end{figure}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{resource/Dokumentasi/6 - masih sama menjalankan perintah di terminal p3.png}
+  \caption{Menginstal paket Docker Engine (\texttt{docker-ce} dan dependensinya)}
+  \label{fig:p9-06-install-docker-pkg}
+\end{figure}
+
+\begin{lstlisting}[caption={Perintah instalasi Docker Engine pada Ubuntu VPS}, label={lst:docker-install}]
+sudo apt update
+
+sudo apt install ca-certificates curl
+sudo install -m 0755 -d /etc/apt/keyrings
+sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
+sudo chmod a+r /etc/apt/keyrings/docker.asc
+
+sudo tee /etc/apt/sources.list.d/docker.sources <<EOF
+Types: deb
+URIs: https://download.docker.com/linux/ubuntu
+Suites: $(. /etc/os-release && echo "${UBUNTU_CODENAME:-$VERSION_CODENAME}")
+Components: stable
+Architectures: $(dpkg --print-architecture)
+Signed-By: /etc/apt/keyrings/docker.asc
+EOF
+
+sudo apt update
+sudo apt-get update
+sudo apt-get install -f
+sudo apt-get install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+\end{lstlisting}
+
+\par Pada perintah-perintah di atas, \ref{lst:docker-install}, saya melakukan pembaruan indeks paket, menginstal dependensi yang diperlukan untuk menambahkan repository Docker, lalu menambahkan key GPG dan repository Docker ke sistem. Setelah itu, saya memperbarui kembali indeks paket dan menginstal paket Docker Engine beserta dependensinya.
+
+\subsection{Verifikasi Status Docker dan \textit{Hello World}}
+\par Setelah instalasi selesai, saya memastikan service Docker berstatus aktif dengan menjalankan \texttt{systemctl status docker}. Hasil verifikasi status service terlihat pada Gambar \ref{fig:p9-07-status-docker}. Selanjutnya, instalasi Docker diuji menggunakan image \texttt{hello-world} sebagai validasi dasar bahwa Docker dapat menarik image dan menjalankan container (Gambar \ref{fig:p9-08-hello-world-sudo}).
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{resource/Dokumentasi/7 - installasi dopcker dan cek status running docker.png}
+  \caption{Pengecekan status Docker menggunakan \texttt{systemctl status docker}}
+  \label{fig:p9-07-status-docker}
+\end{figure}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{resource/Dokumentasi/8 - jalankan hello world.png}
+  \caption{Verifikasi instalasi Docker menggunakan \texttt{docker run hello-world}}
+  \label{fig:p9-08-hello-world-sudo}
+\end{figure}
+
+\par Terlihat dari gambar \ref{fig:p9-07-status-docker} dan \ref{fig:p9-08-hello-world-sudo} bahwa Docker berhasil diinstal dan berjalan dengan baik, serta dapat menjalankan container hello-world tanpa masalah.
+
+\subsection{Menambahkan User Non-root ke Grup Docker}
+\par Agar perintah Docker tidak harus dijalankan menggunakan \texttt{sudo}, saya menambahkan user saat ini ke grup \texttt{docker}. Proses penambahan user ditunjukkan pada Gambar \ref{fig:p9-09-add-group} dan perubahan group diverifikasi menggunakan perintah \texttt{groups} (Gambar \ref{fig:p9-10-newgrp}). Setelah itu, saya mencoba kembali menjalankan \texttt{hello-world} tanpa \texttt{sudo} dan berhasil.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{resource/Dokumentasi/9 - Menambahkan non-root user ke Grup Docker.png}
+  \caption{Menambahkan user ke grup Docker}
+  \label{fig:p9-09-add-group}
+\end{figure}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{resource/Dokumentasi/10 - newgrp untuk msukkan docker ke group lalu cek apakah ada docker di group lalu coba jalankan hellow world tanpa sudo.png}
+  \caption{Memuat ulang group dengan \texttt{newgrp docker} dan mencoba menjalankan Docker tanpa \texttt{sudo}}
+  \label{fig:p9-10-newgrp}
+\end{figure}
+
+\begin{lstlisting}[caption={Menambahkan user ke grup Docker dan verifikasi tanpa sudo}, label={lst:docker-group}]
+sudo usermod -aG docker $USER
+newgrp docker
+groups
+docker run hello-world
+\end{lstlisting}
+
+\par Perintah di atas, \ref{lst:docker-group}, saya menambahkan user saat ini ke grup Docker menggunakan \texttt{usermod}, lalu memuat ulang group dengan \texttt{newgrp} agar perubahan langsung berlaku. Setelah itu, saya memverifikasi bahwa user sudah termasuk dalam grup Docker dan berhasil menjalankan perintah Docker tanpa perlu \texttt{sudo}.
+
+\subsection{Menyiapkan Folder Kerja dan Menyalin Source Code}
+\par Setelah Docker siap, saya membuat folder kerja baru di home directory untuk menyimpan project. Proses pembuatan folder kerja ditunjukkan pada Gambar \ref{fig:p9-11-mkdir}, sedangkan folder project yang telah terisi source code ditunjukkan pada Gambar \ref{fig:p9-13-copied}.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{resource/Dokumentasi/11 - baut folder baru di root.png}
+  \caption{Membuat folder kerja baru di home directory}
+  \label{fig:p9-11-mkdir}
+\end{figure}
+
+\begin{lstlisting}[caption={Perintah membuat folder kerja project}, label={lst:folder-setup}]
+cd ~
+mkdir psait
+cd psait
+mkdir jwt
+cd jwt
+\end{lstlisting}
+
+\par Source code kemudian disalin ke folder tersebut menggunakan VS Code Remote/SSH. Proses copy ditunjukkan pada Gambar \ref{fig:p9-12-copy} dan hasilnya terlihat pada Gambar \ref{fig:p9-13-copied}.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{resource/Dokumentasi/12 - buka folder dan copy source kode ke folder yang baru dibuat.png}
+  \caption{Membuka folder project di VPS dan menyalin source code}
+  \label{fig:p9-12-copy}
+\end{figure}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{resource/Dokumentasi/13 - hasil copynya.png}
+  \caption{Struktur folder project setelah proses penyalinan source code selesai}
+  \label{fig:p9-13-copied}
+\end{figure}
+
+\par Terlihat pada gambar \ref{fig:p9-12-copy} muncul pop up untuk copy code, dan pada gambar \ref{fig:p9-13-copied} bahwa source code berhasil disalin ke folder kerja di VPS, sehingga siap untuk dilakukan konfigurasi dan dijalankan.
+
+\subsection{Konfigurasi Koneksi Database MySQL (Tanpa \texttt{.env})}
+\par Pada modul, konfigurasi database disarankan menggunakan file \texttt{.env} agar parameter koneksi (host, port, username, password) dapat diubah tanpa memodifikasi kode. Namun, pada praktikum ini saya menggunakan pendekatan \textit{hardcode} langsung di file \texttt{config/database.php} (Gambar \ref{fig:p9-14-db-config}) karena lebih mudah.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{resource/Dokumentasi/14 - configurasi config database, tanpa env (tidak sesuai modul .png}
+  \caption{Konfigurasi database di \texttt{config/database.php} menggunakan \textit{hardcode} (kode baru)}
+  \label{fig:p9-14-db-config}
+\end{figure}
+
+\par Terlihat pada gambar \ref{fig:p9-14-db-config} bahwa parameter koneksi database diisi langsung dengan nilai yang sesuai (lihat gambar atau code \ref{lst:db-config-hardcode}) untuk mengakses MySQL di VPS. Pendekatan ini memang kurang fleksibel dibandingkan menggunakan \texttt{.env}, tetapi memudahkan saya dalam tahap awal agar tidak perlu mengatur file environment tambahan.
+
+\par Cuplikan konfigurasi koneksi database pada kode baru ditunjukkan pada Kode \ref{lst:db-config-hardcode}. Pada konfigurasi tersebut, \texttt{db\_host} diarahkan ke IP VPS agar dapat diakses dari container, dan parameter port ditambahkan secara eksplisit.
+
+\begin{lstlisting}[caption={Konfigurasi koneksi database pada kode baru (\texttt{config/database.php})}, label={lst:db-config-hardcode}]
+<?php
+// used to get mysql database connection
+class DatabaseService{
+
+    private $db_host = "10.33.35.96";
+    private $db_port = 3306;
+    private $db_name = "sait_db";
+    private $db_user = "fauzan";
+    private $db_password = "fauzan123";
+    private $connection;
+
+    public function getConnection(){
+
+        $this->connection = null;
+
+        try{
+            $this->connection = new PDO("mysql:host=" . $this->db_host . ";port=" . $this->db_port . ";dbname=" . $this->db_name, $this->db_user, $this->db_password);
+        }catch(PDOException $exception){
+            echo "Connection failed: " . $exception->getMessage();
+        }
+
+        return $this->connection;
+    }
+}
+?>
+\end{lstlisting}
+
+\par Karena database ada di VPS, maka host diarahkan ke IP VPS agar dapat diakses dari container yang akan dijalankan nanti. Selain itu, port MySQL (3306) juga ditambahkan secara eksplisit pada konfigurasi DSN untuk memastikan koneksi dapat dilakukan dengan benar.
+
+\subsection{Uji Aplikasi Sebelum Dockerization (PHP Development Server)}
+\par Sebelum membuat Docker Image, saya melakukan pengecekan terlebih dahulu menggunakan PHP development server. Pada tahap ini saya menjalankan server pada port \texttt{8000} (Gambar \ref{fig:p9-15-php-server}). Perintah yang dijalankan ditunjukkan pada Kode \ref{lst:php-dev-server}.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{resource/Dokumentasi/15 - aktifkan php server dengan port 8000.png}
+  \caption{Menjalankan PHP development server pada port \texttt{8000}}
+  \label{fig:p9-15-php-server}
+\end{figure}
+
+\begin{lstlisting}[caption={Menjalankan PHP development server}, label={lst:php-dev-server}]
+php -S 0.0.0.0:8000
+\end{lstlisting}
+
+\par Setelah server berjalan, saya mengubah environment Hoppscotch agar base URL tidak lagi mengarah ke \texttt{ip tanpa port}, melainkan ke alamat IP VPS dengan port 8000. Perubahan environment ditunjukkan pada Gambar \ref{fig:p9-16-hoppscotch-env-ip}. Setelah itu, endpoint \texttt{Cek} berhasil diakses dan mengembalikan JSON sederhana (Gambar \ref{fig:p9-17-hoppscotch-cek}).
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{resource/Dokumentasi/16 - ubah env di hoppscotch bagain link dengan menganti dari localhost ke alamat ip.png}
+  \caption{Mengubah environment Hoppscotch: base URL diarahkan ke IP VPS}
+  \label{fig:p9-16-hoppscotch-env-ip}
+\end{figure}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{resource/Dokumentasi/17 - test cek dan berhasil terhubung.png}
+  \caption{Endpoint \texttt{Cek} berhasil diuji menggunakan Hoppscotch}
+  \label{fig:p9-17-hoppscotch-cek}
+\end{figure}
+
+\par Dari gambar \ref{fig:p9-16-hoppscotch-env-ip} dan \ref{fig:p9-17-hoppscotch-cek} terlihat bahwa setelah base URL diubah ke IP VPS dengan port 8000, endpoint \texttt{Cek} dapat diakses dengan sukses melalui Hoppscotch, menandakan bahwa aplikasi sudah berjalan dengan baik sebelum dilakukan Dockerization.
+
+\subsection{Menjadikan Aplikasi Siap Produksi: \texttt{.htaccess} dan Router \texttt{index.php}}
+\par Setelah pengecekan awal berhasil, saya menyiapkan konfigurasi agar aplikasi dapat berjalan rapi di Apache (dalam container). Konfigurasi \texttt{.htaccess} digunakan untuk mengaktifkan rewrite dan membantu meneruskan header \texttt{Authorization} agar dapat terbaca oleh PHP (Gambar \ref{fig:p9-18-htaccess}), permasalahan itu juga pada pertemuan kemarin gagal karena header tidak diteruskan dengan benar oleh apache.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{resource/Dokumentasi/18 - edit htaccess.png}
+  \caption{Mengedit \texttt{.htaccess} untuk rewrite dan meneruskan header \texttt{Authorization}}
+  \label{fig:p9-18-htaccess}
+\end{figure}
+
+\par Selain itu, file \texttt{index.php} di root project diubah menjadi router sederhana agar request ke endpoint seperti \texttt{/api/login} atau \texttt{/api/users} dapat diarahkan ke file handler yang sesuai. Perubahan router di root ditunjukkan pada Gambar \ref{fig:p9-19-router-index}.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{resource/Dokumentasi/19 - edit index.php di root agar ada helper untuk api.png}
+  \caption{Mengubah \texttt{index.php} di root menjadi router untuk endpoint API}
+  \label{fig:p9-19-router-index}
+\end{figure}
+
+\par Cuplikan konfigurasi \texttt{.htaccess} dan router \texttt{index.php} ditunjukkan pada Kode \ref{lst:htaccess} dan Kode \ref{lst:router-index}.
+
+\begin{lstlisting}[caption={Konfigurasi \texttt{.htaccess} pada kode baru}, label={lst:htaccess}]
+<IfModule mod_rewrite.c>
+    DirectorySlash Off
+    RewriteEngine On
+    RewriteCond %{HTTP:Authorization} ^(.*)
+    RewriteRule .* - [e=HTTP_AUTHORIZATION:%1]
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteRule ^ index.php [L]
+</IfModule>
+\end{lstlisting}
+
+\begin{lstlisting}[caption={Router sederhana pada root project (\texttt{index.php})}, label={lst:router-index}]
+<?php
+// CORS headers
+header("Access-Control-Allow-Origin: *");
+header("Content-Type: application/json; charset=UTF-8");
+header("Access-Control-Allow-Methods: POST, GET, OPTIONS");
+header("Access-Control-Max-Age: 3600");
+header("Access-Control-Allow-Headers: Content-Type, Access-Control-Allow-Headers, Authorization, X-Requested-With");
+
+// Handle preflight request
+if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+    http_response_code(200);
+    exit();
+}
+
+// Normalize URI
+$requestUri = $_SERVER['REQUEST_URI'];
+$requestUri = strtok($requestUri, '?');
+
+if ($requestUri !== '/' && substr($requestUri, -1) === '/') {
+    $requestUri = rtrim($requestUri, '/');
+}
+
+// Routing
+switch ($requestUri) {
+
+    case '/api/login':
+        require 'api/login/index.php';
+        break;
+
+    case '/api/register':
+        require 'api/register/index.php';
+        break;
+
+    case '/api/users':
+        require 'api/users/index.php';
+        break;
+
+    case '/':
+    case '/index.php':
+        http_response_code(200);
+        echo json_encode(["message" => "Welcome to the API service"]);
+        break;
+
+    default:
+        http_response_code(404);
+        echo json_encode([
+            "message" => "Endpoint not found.",
+            "debug_uri" => $requestUri
+        ]);
+        break;
+}
+?>
+\end{lstlisting}
+
+\par Dari kode diatas \ref{lst:htaccess} dan \ref{lst:router-index} terlihat bahwa \texttt{.htaccess} mengaktifkan rewrite dan memastikan header \texttt{Authorization} diteruskan ke PHP, sedangkan \texttt{index.php} berfungsi sebagai router yang memeriksa URI request dan mengarahkan ke file handler yang sesuai untuk setiap endpoint API. Dengan konfigurasi ini, aplikasi siap dijalankan di Apache dalam container Docker nanti.
+\par dengan begitu, enpoint API tidak perlu mencantumkan path dengan index.php, sehingga URL menjadi lebih rapi seperti \texttt{/api/login} daripada \texttt{/index.php/api/login}. Padahal di praktikum sebelumnya, endpoint API harus saya akses dengan menyertakan \texttt{index.php} di URL karena belum ada router yang menangani request secara dinamis. Dengan adanya router di root, maka semua request dapat diarahkan ke file handler yang sesuai tanpa perlu menyertakan \texttt{index.php} di URL, sehingga lebih bersih dan mudah diingat.
+
+\subsection{Perbaikan Path Import Menggunakan \texttt{\_\_DIR\_\_}}
+\par Setelah router digunakan, eksekusi file endpoint tidak selalu berada pada working directory yang sama, sehingga relative path seperti \texttt{../../config/database.php} dan \texttt{../../vendor/autoload.php} berpotensi gagal ditemukan. Untuk mengatasi hal ini, saya mengubah import file pada endpoint menjadi berbasis \texttt{\_\_DIR\_\_} (Gambar \ref{fig:p9-20-dir-require}) sehingga path selalu dihitung dari lokasi file itu sendiri.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{resource/Dokumentasi/20 - mengedit require path menggunakan dir, disitu ada kelasalah dan di perbaiki setelah di screnshoot tentang tanda slash di setelag titik setelah dir.png}
+  \caption{Perbaikan \texttt{include/require} menggunakan konstanta \texttt{\_\_DIR\_\_}}
+  \label{fig:p9-20-dir-require}
+\end{figure}
+
+\par Sebetulnya pada gambar \ref{fig:p9-20-dir-require} terlihat bahwa pada awalnya saya lupa menambahkan tanda slash (/) setelah \texttt{\_\_DIR\_\_}, sehingga path yang dihasilkan menjadi salah (misalnya \texttt{/var/www/htmlapi/login/../../config/database.php} yang tidak valid). Setelah diperbaiki dengan menambahkan slash, path jadi bisa berfungsi dengan benar (misalnya \texttt{/var/www/html/api/login/../../config/database.php}) dan file dapat ditemukan dengan benar.
+
+\par Contoh perubahan import pada endpoint \texttt{/api/users/index.php} ditunjukkan pada Kode \ref{lst:dir-snippet}.
+
+\begin{lstlisting}[caption={Cuplikan perubahan import menggunakan \texttt{\_\_DIR\_\_}}, label={lst:dir-snippet}]
+/* Sebelum */
+include_once '../../config/database.php';
+require "../../vendor/autoload.php";
+
+/* Sesudah */
+include_once __DIR__ . '/../../config/database.php';
+require __DIR__ . "/../../vendor/autoload.php";
+\end{lstlisting}
+
+\par Dengan perubahan tersebut, maka file yang diimport akan selalu dihitung relatif terhadap lokasi file endpoint itu sendiri, sehingga tidak tergantung pada working directory saat aplikasi dijalankan. Hal ini sangat penting agar aplikasi dapat berjalan dengan benar baik saat dijalankan secara langsung maupun di dalam container Docker nanti.
+
+\subsection{Membuat \texttt{Dockerfile} (Kode Baru)}
+\par Setelah aplikasi disiapkan agar kompatibel dengan Apache, saya membuat \texttt{Dockerfile}. Berbeda dengan modul yang menggunakan port 8080, pada praktikum ini saya menggunakan port \texttt{8000} sama aja hasilnya sebetulnya. Penulisan \texttt{Dockerfile} ditunjukkan pada Gambar \ref{fig:p9-21-dockerfile}.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{resource/Dokumentasi/21 - buat dockerfile beda dengan modul jarena pakai port 8000.png}
+  \caption{Membuat \texttt{Dockerfile} untuk menjalankan API PHP pada port \texttt{8000}}
+  \label{fig:p9-21-dockerfile}
+\end{figure}
+
+\par Ringkasnya, \texttt{Dockerfile} menggunakan base image \texttt{php:8.2-apache}, menginstal ekstensi \texttt{pdo\_mysql} untuk koneksi database, mengaktifkan modul \texttt{rewrite} dan \texttt{headers}, mengizinkan \texttt{.htaccess} dibaca (\texttt{AllowOverride All}), lalu mengganti port Apache dari \texttt{80} menjadi \texttt{8000}. Implementasi lengkap \texttt{Dockerfile} ditunjukkan pada Kode \ref{lst:dockerfile}.
+
+\begin{lstlisting}[caption={Isi \texttt{Dockerfile} pada kode baru}, label={lst:dockerfile}]
+FROM php:8.2-apache
+
+RUN docker-php-ext-install pdo_mysql
+
+RUN a2enmod rewrite headers
+
+RUN sed -ri 's/AllowOverride None/AllowOverride All/g' /etc/apache2/apache2.conf
+
+RUN rm -f /var/www/html/index.html
+
+RUN sed -ri 's/Listen 80/Listen 8000/g' /etc/apache2/ports.conf \
+    && sed -ri 's/:80>/:8000>/g' /etc/apache2/sites-available/000-default.conf
+
+WORKDIR /var/www/html
+
+COPY . /var/www/html
+
+EXPOSE 8000
+
+CMD ["apache2-foreground"]
+\end{lstlisting}
+
+\subsection{Build Docker Image dan Verifikasi Daftar Image}
+\par Setelah \texttt{Dockerfile} selesai dibuat, saya melakukan build Docker Image menggunakan \texttt{docker build} dengan tag \texttt{jwt-pertemuan-8-9}. Proses build ditunjukkan pada Gambar \ref{fig:p9-22-docker-build}. Setelah build selesai, saya mengecek daftar image menggunakan \texttt{docker images} dan memastikan image \texttt{jwt-pertemuan-8-9} sudah tersedia (Gambar \ref{fig:p9-23-docker-images}).
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{resource/Dokumentasi/22 - build docker.png}
+  \caption{Proses build Docker Image menggunakan \texttt{docker build}}
+  \label{fig:p9-22-docker-build}
+\end{figure}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{resource/Dokumentasi/23 - docker images.png}
+  \caption{Hasil pengecekan daftar image: image \texttt{jwt-pertemuan-8-9} berhasil dibuat}
+  \label{fig:p9-23-docker-images}
+\end{figure}
+
+\par Dari gambar \ref{fig:p9-22-docker-build} terlihat bahwa proses build berhasil tanpa error, dan pada gambar \ref{fig:p9-23-docker-images} terlihat bahwa image dengan tag \texttt{jwt-pertemuan-8-9} sudah tersedia di daftar image Docker, sehingga siap untuk dijalankan sebagai container.
+
+\begin{lstlisting}[caption={Perintah build dan cek Docker image}, label={lst:docker-build-images}]
+docker build -t jwt-pertemuan-8-9 .
+docker images
+\end{lstlisting}
+
+\par Perintah di atas, \ref{lst:docker-build-images}, saya menjalankan perintah build dengan tag \texttt{jwt-pertemuan-8-9} dan memastikan bahwa image tersebut sudah berhasil dibuat dengan mengecek daftar image menggunakan \texttt{docker images}.
+
+\subsection{Menjalankan Container dan Verifikasi Status}
+\par Setelah image tersedia, saya menjalankan image tersebut sebagai container dengan memetakan port \texttt{8000} host ke port \texttt{8000} di container. Karena pada praktikum ini konfigurasi database tidak menggunakan \texttt{.env}, saya tidak menambahkan opsi \texttt{--env-file} pada \texttt{docker run}. Proses menjalankan container ditunjukkan pada Gambar \ref{fig:p9-24-docker-run}. Selanjutnya, status container diverifikasi menggunakan \texttt{docker ps -a} dan \texttt{docker ps} seperti pada Gambar \ref{fig:p9-25-docker-ps}.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{resource/Dokumentasi/24 - docker run karena gak pakai env hanya seperti itu aja perintahnya.png}
+  \caption{Menjalankan container \texttt{jwt-pertemuan-8-9} pada port \texttt{8000}}
+  \label{fig:p9-24-docker-run}
+\end{figure}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{resource/Dokumentasi/25 - docker ps.png}
+  \caption{Verifikasi status container menggunakan \texttt{docker ps -a} dan \texttt{docker ps}}
+  \label{fig:p9-25-docker-ps}
+\end{figure}
+
+\par Dari gambar \ref{fig:p9-24-docker-run} terlihat bahwa container berhasil dijalankan dengan perintah yang benar, dan pada gambar \ref{fig:p9-25-docker-ps} terlihat bahwa container dengan nama acak (misalnya \texttt{prickly\_fermi}) sudah berjalan dengan status \texttt{Up} pada port \texttt{8000}, menandakan bahwa aplikasi sudah berjalan di dalam container.
+
+\begin{lstlisting}[caption={Perintah menjalankan container dan cek status}, label={lst:docker-run-ps}]
+docker run -d -p 8000:8000 jwt-pertemuan-8-9
+docker ps -a
+docker ps
+\end{lstlisting}
+
+\par Dengan perintah di atas, \ref{lst:docker-run-ps}, saya menjalankan container secara detached dengan memetakan port 8000, lalu mengecek status semua container dan container yang sedang berjalan untuk memastikan bahwa container sudah aktif.
+
+\subsection{Menyesuaikan Base URL Hoppscotch untuk Aplikasi Docker}
+\par Setelah aplikasi berjalan di Docker, base URL yang sebelumnya masih memiliki path \texttt{/jwt} perlu disesuaikan karena aplikasi di container berjalan pada root. Perubahan environment di Hoppscotch ditunjukkan pada Gambar \ref{fig:p9-26-hoppscotch-env-root}. Setelah base URL diperbarui, endpoint \texttt{Cek} kembali diuji dan berhasil (Gambar \ref{fig:p9-27-hoppscotch-cek-docker}).
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{resource/Dokumentasi/26 - edit env di hoppscotch karena sekarang paai root port 8000.png}
+  \caption{Mengubah base URL Hoppscotch agar mengarah ke root aplikasi Docker}
+  \label{fig:p9-26-hoppscotch-env-root}
+\end{figure}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{resource/Dokumentasi/27 - cek koneksi dengan env baru.png}
+  \caption{Pengujian endpoint \texttt{Cek} setelah aplikasi berjalan di Docker}
+  \label{fig:p9-27-hoppscotch-cek-docker}
+\end{figure}
+
+\par Terlihat pada gambar \ref{fig:p9-26-hoppscotch-env-root} bahwa base URL diubah menjadi \texttt{http://10.33.35.96:8000} tanpa path tambahan, karena aplikasi di Docker berjalan pada root. Setelah itu, pada gambar \ref{fig:p9-27-hoppscotch-cek-docker} terlihat bahwa endpoint \texttt{Cek} berhasil diakses dengan base URL baru, menandakan bahwa aplikasi sudah berjalan dengan benar di dalam container Docker.
+
+\subsection{Troubleshooting: Koneksi MySQL dari Container}
+\par Pada tahap pengujian endpoint \texttt{Login}, aplikasi sempat gagal terhubung ke MySQL dengan error \texttt{SQLSTATE[HY000] [2002] Connection refused}. Error tersebut ditunjukkan pada Gambar \ref{fig:p9-28-sql-error}. Kondisi ini membuat \texttt{\$dbConnection} bernilai \texttt{null}, sehingga pemanggilan \texttt{prepare()} memunculkan error lanjutan.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{resource/Dokumentasi/28 - error konesksi sql.png}
+  \caption{Contoh error koneksi database saat endpoint \texttt{Login} diakses dari container}
+  \label{fig:p9-28-sql-error}
+\end{figure}
+
+\par Untuk menyelesaikan masalah tersebut, saya menambahkan user MySQL yang bisa diakses dari semua host (\texttt{\%}) dan memberikan hak akses ke database \texttt{sait\_db}. Proses penambahan user dan grant privilege ditunjukkan pada Gambar \ref{fig:p9-29-mysql-user}, sedangkan perintahnya dirangkum pada Kode \ref{lst:mysql-user}.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{resource/Dokumentasi/29 - menambahkan user baru yang bisa di akses dari semua ip.png}
+  \caption{Menambahkan user MySQL yang dapat diakses dari semua host untuk kebutuhan koneksi container}
+  \label{fig:p9-29-mysql-user}
+\end{figure}
+
+\begin{lstlisting}[caption={Perintah menambahkan user MySQL agar dapat diakses dari semua host}, label={lst:mysql-user}]
+sudo mysql -u root -p
+
+CREATE USER 'fauzan'@'%' IDENTIFIED BY 'fauzan123';
+GRANT ALL PRIVILEGES ON sait_db.* TO 'fauzan'@'%';
+FLUSH PRIVILEGES;
+\end{lstlisting}
+
+\par Dengan perintah di atas \ref{lst:mysql-user}, saya masuk ke MySQL sebagai root, lalu membuat user baru \texttt{fauzan} yang dapat diakses dari host manapun dengan password \texttt{fauzan123}. Setelah itu, saya memberikan hak akses penuh ke database \texttt{sait\_db} untuk user tersebut dan melakukan flush privileges agar perubahan langsung berlaku. Setelah langkah ini, koneksi dari container ke MySQL berhasil dilakukan tanpa error.
+
+\subsection{Pengujian Endpoint \texttt{Login} dan \texttt{Get All Users} di Docker}
+\par Setelah akses database diperbaiki, endpoint \texttt{Login} kembali diuji dan berhasil mengembalikan token JWT (Gambar \ref{fig:p9-30-login-success}). Token JWT tersebut kemudian digunakan untuk mengakses endpoint \texttt{Get All Users}, dan server berhasil mengembalikan data user dengan pesan \texttt{"Access granted"} (Gambar \ref{fig:p9-31-get-users-success}).
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{resource/Dokumentasi/30 - login sukses dan langsung tersimpan ke env karena pakai script dari pertemuan sebelumnya.png}
+  \caption{Endpoint \texttt{Login} berhasil mengembalikan token JWT pada aplikasi Docker}
+  \label{fig:p9-30-login-success}
+\end{figure}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{resource/Dokumentasi/31 - get users berhasil.png}
+  \caption{Endpoint \texttt{Get All Users} berhasil diakses dengan bearer token}
+  \label{fig:p9-31-get-users-success}
+\end{figure}
+
+\par Dari gambar \ref{fig:p9-30-login-success} terlihat bahwa endpoint \texttt{Login} berhasil dipanggil dan mengembalikan token JWT yang valid. Setelah itu itu sudah tersimpan ke env pakai script yang ada di praktikum kemarin, pada gambar \ref{fig:p9-31-get-users-success} terlihat bahwa endpoint \texttt{Get All Users} juga berhasil diakses dengan menyertakan bearer token, dan server merespon dengan data user serta pesan akses yang diberikan, menandakan bahwa aplikasi sudah berjalan dengan baik di dalam container Docker.
+
+\subsection{Tugas \& Analisis}
+\par Bagian ini merupakan pengerjaan tugas dan analisis berdasarkan instruksi praktikum. Soal yang dikerjakan berfokus pada pengelolaan Docker Image/Container yang telah dibuat.
+
+\subsubsection{Bagaimana cara menghapus Docker Image/Container yang telah dibuat?}
+\par Untuk menghapus container yang sedang berjalan, langkahnya adalah menghentikan container lalu menghapusnya. Setelah container dihapus, image dapat dihapus menggunakan \texttt{docker rmi}. Pada praktikum ini, contoh alur penghapusan/recreate container ditunjukkan pada Gambar \ref{fig:p9-32-task}.
+
+\begin{lstlisting}[caption={Contoh menghapus container dan image Docker}, label={lst:docker-remove}]
+docker ps
+docker stop jwt-app
+docker rm jwt-app
+
+docker images
+docker rmi jwt-pertemuan-8-9
+\end{lstlisting}
+
+\subsubsection{Bagaimana jika source code berubah dan Image/Container ingin diperbarui?}
+\par Jika source code berubah, image perlu dibangun ulang dengan \texttt{docker build}. Apabila ingin menggunakan nama container yang sama, container lama harus dihentikan dan dihapus terlebih dahulu agar tidak terjadi konflik nama. Pada praktikum ini, saya sempat mendapatkan error konflik nama container \texttt{jwt-app} sehingga perlu melakukan \texttt{docker stop} dan \texttt{docker rm} sebelum menjalankan container kembali. Hasil pengerjaan tugas dan analisis ini ditunjukkan pada Gambar \ref{fig:p9-32-task}.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{resource/Dokumentasi/32 - tugas dan analisis 1 cara menghapus images dan build ulang kalau ada perubahan.png}
+  \caption{Tugas \& Analisis: menghapus container, build ulang image, dan menjalankan ulang container}
+  \label{fig:p9-32-task}
+\end{figure}
+
+\begin{lstlisting}[caption={Contoh build ulang image dan menjalankan ulang container setelah ada perubahan}, label={lst:docker-rebuild}]
+docker ps -a
+
+docker stop jwt-app
+docker rm jwt-app
+
+docker build -t jwt-pertemuan-8-9 .
+docker run -d --name jwt-app -p 8000:8000 jwt-pertemuan-8-9
+\end{lstlisting}
+
 \section{Kesimpulan}
+
+\par Kesimpulan dari praktikum \textit{API PHP dengan Docker} adalah sebagai berikut:
+\begin{enumerate}
+  \item Docker Engine berhasil diinstal pada Ubuntu VPS dan terverifikasi berjalan aktif melalui \texttt{systemctl status docker} serta pengujian \texttt{docker run hello-world}.
+  \item Aplikasi REST API PHP (JWT) berhasil dipersiapkan dari \textbf{kode lama} menjadi \textbf{kode baru} dengan penambahan konfigurasi \texttt{.htaccess}, router \texttt{index.php}, serta perbaikan import path menggunakan \texttt{\_\_DIR\_\_}.
+  \item \texttt{Dockerfile} berhasil dibuat dan disesuaikan menggunakan port \texttt{8000}, kemudian image \texttt{jwt-pertemuan-8-9} berhasil dibangun dan dijalankan sebagai container.
+  \item Hoppscotch mempermudah pengujian endpoint karena base URL dapat disimpan sebagai environment variable dan request dapat dieksekusi berulang tanpa menulis ulang URL.
+  \item Kendala utama yang ditemui adalah kegagalan koneksi MySQL dari container (\texttt{Connection refused}). Masalah ini diselesaikan dengan menambahkan user MySQL yang dapat diakses dari semua host (\texttt{\%}) dan memberikan hak akses ke database \texttt{sait\_db}.
+  \item Pengelolaan image/container dapat dilakukan dengan menghentikan dan menghapus container lama, lalu membangun ulang image dan menjalankan container baru ketika source code mengalami perubahan.
+\end{enumerate}
 
 \section{Daftar Pustaka}
 \printbibliography[heading=none]
