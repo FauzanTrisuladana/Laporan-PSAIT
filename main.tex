@@ -254,6 +254,14 @@ Dosen Pengampu & : & \DosenPengampu \\
 
 \subsection{Docker Compose}
 
+\par Docker Compose adalah tool untuk mendefinisikan dan menjalankan aplikasi multi-container berbasis Docker. Dengan Docker Compose, konfigurasi beberapa container (misalnya backend API, database, dan tool pendukung) dituliskan dalam sebuah berkas YAML seperti defaultnya, \texttt{docker-compose.yml}, lalu seluruh stack dapat dijalankan atau dihentikan melalui satu perintah, contohnya \texttt{docker compose up} dan \texttt{docker compose down} \cite{docker-compose-docs}.
+
+\par Berkas \texttt{docker-compose.yml} membantu menerjemahkan perintah \texttt{docker run} yang panjang menjadi deklarasi konfigurasi yang lebih terstruktur. Pada Compose, setiap container direpresentasikan sebagai \textit{service} dan dapat diberi pengaturan seperti \texttt{image} atau \texttt{build} (sumber image), \texttt{ports} (publikasi port), \texttt{volumes} (mount direktori/volume), \texttt{environment} (variabel lingkungan), serta \texttt{depends\_on} untuk mengatur ketergantungan antar service \cite{docker-compose-file}.
+
+\par Docker Compose juga mendukung manajemen konfigurasi melalui variabel environment (misalnya memanfaatkan berkas \texttt{.env} dan opsi \texttt{env\_file}) sehingga parameter untuk terhubung ke layanan lain seperti database dapat diubah tanpa memodifikasi kode aplikasi \cite{docker-compose-docs}. Selain itu, Compose menyediakan perintah untuk observabilitas dan siklus hidup service seperti \texttt{docker compose ps}, \texttt{docker compose logs}, \texttt{docker compose restart}, serta kemampuan rebuild image melalui \texttt{docker compose build} ketika ada perubahan pada \texttt{Dockerfile} \cite{docker-compose-docs}.
+
+\par Secara standar, format dan perilaku Compose mengacu pada \textit{Compose Specification} sehingga definisi service, network, dan volume dapat dipahami secara konsisten oleh berbagai implementasi yang mengikuti spesifikasi tersebut \cite{compose-spec}. Dalam praktik pengembangan, Docker Compose banyak digunakan untuk menyiapkan environment yang reproducible untuk development dan testing, serta memudahkan orkestrasi service yang saling terhubung dalam satu jaringan Docker \cite{docker-docs,docker-compose-docs}.
+
 %contoh gambar dan kode
 % \begin{figure}[H]
 %     \centering
@@ -269,7 +277,410 @@ Dosen Pengampu & : & \DosenPengampu \\
 
 \section{Hasil dan Pembahasan}
 
+\par Pada pertemuan ini saya melakukan implementasi orkestrasi REST API berbasis PHP (JWT) menggunakan Docker Compose pada server VPS. Kode awal yang digunakan berasal dari praktikum sebelumnya dan pada pertemuan ini dikembangkan menjadi versi terbaru yang dijalankan menggunakan Docker Compose. Alur praktikum mengikuti urutan pada modul yang ada dibawah ini, dengan beberapa penyesuaian yang saya lakukan untuk memastikan integrasi antara service API dan database berjalan dengan baik.
+
+\par Salah satu penyesuaian yang saya lakukan sebelum mengikuti langkah pada modul adalah mengubah konfigurasi koneksi database dari model \textit{hardcode} (kode lama) menjadi membaca variabel environment dari file \texttt{.env}. Perubahan ini membuat aplikasi lebih fleksibel karena nilai host, port, nama database, user, dan password dapat diubah tanpa memodifikasi kode PHP.
+
+\par Secara ringkas, langkah yang saya lakukan adalah sebagai berikut:
+\begin{enumerate}
+  \item Mengubah konfigurasi koneksi database agar membaca variabel environment dari file \texttt{.env}.
+  \item Membuat file \texttt{.env} untuk menyimpan parameter koneksi database.
+  \item Menyiapkan struktur project versi terbaru (Docker Compose).
+  \item Menghentikan dan menghapus container PHP-JWT lama dari pertemuan sebelumnya untuk menghindari konflik.
+  \item Membuat file \texttt{docker-compose.yml} untuk menjalankan service \texttt{be-jwt}.
+  \item Menjalankan \texttt{docker compose up -d} dan memverifikasi status service.
+  \item Melakukan rebuild dan restart service ketika ada perubahan konfigurasi.
+  \item Menambahkan service \texttt{database\_mysql} (MySQL) ke dalam \texttt{docker-compose.yml}.
+  \item Menambahkan persistent volume \texttt{db\_data} dan melakukan mount SQL init \texttt{php\_jwt\_db.sql}.
+  \item Menambahkan konfigurasi \texttt{depends\_on} agar urutan start container lebih terkontrol.
+  \item Mengubah nilai \texttt{DB\_HOST} pada \texttt{.env} menjadi nama service \texttt{database\_mysql}.
+  \item Menjalankan ulang Docker Compose hingga service API dan database aktif.
+  \item Menguji endpoint \texttt{Cek}, \texttt{Register}, \texttt{Login}, dan \texttt{Get All Users} menggunakan Hoppscotch.
+  \item Menguji \textit{hot reload} dengan menambahkan route \texttt{/docker} tanpa rebuild image.
+  \item Mengerjakan Tugas \& Analisis: menambahkan service phpMyAdmin dan melakukan CRUD dari phpMyAdmin itu.
+\end{enumerate}
+
+\subsection{Migrasi Konfigurasi Database ke \texttt{.env}}
+\par Pada kode lama, konfigurasi database sebelumnya masih menggunakan pendekatan \textit{hardcode}. Namun, pada pertemuan ini modul menyarankan penggunaan \texttt{.env} agar konfigurasi dapat diubah dengan cepat, terlebih saat database dijalankan sebagai service terpisah di jaringan Docker Compose code dirubah dari code \ref{lst:p10-old-db-config}.
+
+\lstinputlisting[caption={Cuplikan konfigurasi database lama (hardcode)}, label={lst:p10-old-db-config}]{resource/jwt docker/config/database.php}
+
+\par karena kode seperti itu \ref{lst:p10-old-db-config} susah di \textit{maintenance} dan setiap perubahan memerlukan rebuild image. Oleh karena itu, saya mengubah file \texttt{config/database.php} agar mengambil nilai host, port, nama database, username, dan password menggunakan fungsi \texttt{getenv()}. Proses perubahan ditunjukkan pada Gambar \ref{fig:p10-01-db-to-env}.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{resource/dokumentasi/1 - mengganti bagian koneksi database ke env.png}
+  \caption{Mengubah konfigurasi koneksi database agar membaca variabel environment}
+  \label{fig:p10-01-db-to-env}
+\end{figure}
+
+\par Setelah itu, saya menambahkan file \texttt{.env} di root project untuk menyimpan parameter koneksi database (Gambar \ref{fig:p10-02-env-file}). Pada tahap awal, nilai \texttt{DB\_HOST} masih diarahkan ke IP VPS karena service database belum ditambahkan ke Docker Compose. Perubahan \texttt{DB\_HOST} menjadi nama service \texttt{database\_mysql} dibahas pada Gambar \ref{fig:p10-12-db-host-service}.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{resource/dokumentasi/2 - file env nya.png}
+  \caption{Membuat file \texttt{.env} untuk menyimpan parameter koneksi database}
+  \label{fig:p10-02-env-file}
+\end{figure}
+
+\par Cuplikan perubahan pada file \texttt{config/database.php} dan isi \texttt{.env} dirangkum pada Kode \ref{lst:p10-db-conn-env} dan Kode \ref{lst:p10-env-initial}.
+
+\begin{lstlisting}[caption={Cuplikan konfigurasi database berbasis environment pada \texttt{config/database.php}}, label={lst:p10-db-conn-env}]
+public function __construct() {
+    $this->db_host = getenv('DB_HOST');
+    $this->db_name = getenv('DB_NAME');
+    $this->db_user = getenv('DB_USER');
+    $this->db_password = getenv('DB_PASSWORD');
+    $this->db_port = getenv('DB_PORT');
+}
+
+$this->connection = new PDO(
+    "mysql:host=" . $this->db_host . ";port=" . $this->db_port . ";dbname=" . $this->db_name,
+    $this->db_user,
+    $this->db_password
+);
+\end{lstlisting}
+
+\begin{lstlisting}[caption={Contoh isi \texttt{.env} untuk parameter koneksi database (tahap awal)}, label={lst:p10-env-initial}]
+DB_HOST=10.33.35.96
+DB_PORT=3306
+DB_NAME=sait_db
+DB_USER=fauzan
+DB_PASSWORD=fauzan123
+\end{lstlisting}
+
+\par Dengan pendekatan ini, konfigurasi koneksi database dapat diganti cukup melalui \texttt{.env} tanpa memodifikasi kode PHP, sehingga lebih sesuai untuk orkestrasi multi-service dengan Docker Compose.
+
+\subsection{Struktur Project Versi Docker Compose}
+\par Setelah penyesuaian koneksi database, struktur project versi terbaru sudah memiliki file \texttt{docker-compose.yml} dan \texttt{.env} pada root project. Struktur folder yang digunakan pada praktikum ini ditunjukkan pada Gambar \ref{fig:p10-03-structure-now}.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{resource/dokumentasi/3 - struktur file sekarang.png}
+  \caption{Struktur folder project versi terbaru (Docker Compose)}
+  \label{fig:p10-03-structure-now}
+\end{figure}
+
+\subsection{Menghentikan dan Menghapus Container PHP-JWT Lama}
+\par Sebelum menjalankan Docker Compose, saya menghentikan dan menghapus container lama dari pertemuan sebelumnya untuk menghindari konflik port dan mempermudah troubleshooting. Proses penghentian dan penghapusan container \texttt{jwt-app} ditunjukkan pada Gambar \ref{fig:p10-04-stop-remove-old}.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{resource/dokumentasi/4 - Menghentikan dan menghapus kontainer php-jwt lama.png}
+  \caption{Menghentikan dan menghapus container PHP-JWT lama dari pertemuan sebelumnya}
+  \label{fig:p10-04-stop-remove-old}
+\end{figure}
+
+\par Perintah yang digunakan untuk menghentikan dan menghapus container dirangkum pada Kode \ref{lst:p10-stop-remove-old}.
+
+\begin{lstlisting}[caption={Perintah menghentikan dan menghapus container lama}, label={lst:p10-stop-remove-old}]
+docker ps -a
+docker stop jwt-app
+docker rm jwt-app
+docker ps -a
+\end{lstlisting}
+
+\par Dengan langkah tersebut, service lama sudah tidak berjalan lagi, sehingga port yang dibutuhkan pada praktikum ini dapat digunakan tanpa tabrakan. Hal ini dibuktikan dengan pengecekan status container yang sudah tidak ada lagi (Gambar \ref{fig:p10-04-stop-remove-old} bagian bawah sendiri).
+
+\subsection{Membuat File \texttt{docker-compose.yml}}
+\par Docker Compose digunakan untuk menerjemahkan proses menjalankan container (yang sebelumnya dilakukan dengan perintah \texttt{docker run}) menjadi sebuah file konfigurasi yaitu file \texttt{docker-compose.yml} di root project. Pada tahap awal, saya membuat service \texttt{be-jwt} untuk menjalankan REST API PHP (JWT), serta mendefinisikan network \texttt{psait}. Proses penulisan file \texttt{docker-compose.yml} ditunjukkan pada Gambar \ref{fig:p10-05-compose-basic}.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{resource/dokumentasi/5 - menambahkan docker compose.png}
+  \caption{Membuat \texttt{docker-compose.yml} dan mendefinisikan service \texttt{be-jwt}}
+  \label{fig:p10-05-compose-basic}
+\end{figure}
+
+\par Cuplikan konfigurasi \texttt{docker-compose.yml} pada tahap awal dirangkum pada Kode \ref{lst:p10-compose-basic} di bawah ini.
+
+\begin{lstlisting}[caption={Cuplikan \texttt{docker-compose.yml} (tahap awal)}, label={lst:p10-compose-basic}]
+services:
+  be-jwt:
+    container_name: php-jwt-zan
+    build: .
+    ports:
+      - "8000:8000"
+    volumes:
+      - .:/var/www/html
+    env_file:
+      - .env
+    restart: unless-stopped
+    networks:
+      - psait
+
+networks:
+  psait:
+    driver: bridge
+\end{lstlisting}
+
+\par Pada konfigurasi di atas, service \texttt{be-jwt} menggunakan instruksi \texttt{build: .} sehingga Docker Compose akan membangun image berdasarkan \texttt{Dockerfile} yang sudah dibuat pada pertemuan sebelumnya. Port \texttt{8000:8000} digunakan agar aplikasi dapat diakses dari luar VPS, sedangkan \texttt{volumes} dipakai untuk melakukan mounting folder project ke dalam container \texttt{/var/www/html} sehingga perubahan kode dapat langsung di-reload (hot reload).
+
+\subsection{Menjalankan Docker Compose Up}
+\par Setelah file \texttt{docker-compose.yml} dibuat, saya menjalankan service menggunakan perintah \texttt{docker compose up -d}. Hasil eksekusi perintah tersebut ditunjukkan pada Gambar \ref{fig:p10-06-compose-up}.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{resource/dokumentasi/6 - Menjalankan Docker Compose Up.png}
+  \caption{Menjalankan service awal menggunakan \texttt{docker compose up -d}}
+  \label{fig:p10-06-compose-up}
+\end{figure}
+
+\begin{lstlisting}[caption={Perintah menjalankan Docker Compose}, label={lst:p10-compose-up}]
+docker compose up -d
+\end{lstlisting}
+
+\par Dengan perintah tersebut, Docker Compose akan membangun image (jika belum ada) dan menjalankan container sesuai definisi pada \texttt{docker-compose.yml}.
+
+\subsection{Mengecek Status Docker Compose}
+\par Untuk memastikan service sudah berjalan, saya mengecek status menggunakan perintah \texttt{docker compose ps -a}. Hasil pengecekan status ditunjukkan pada Gambar \ref{fig:p10-07-compose-ps}.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{resource/dokumentasi/7 - docker compose ps -a di root yang ada docker compose yml.png}
+  \caption{Mengecek status service menggunakan \texttt{docker compose ps -a}}
+  \label{fig:p10-07-compose-ps}
+\end{figure}
+
+\begin{lstlisting}[caption={Perintah mengecek status Docker Compose}, label={lst:p10-compose-ps}]
+docker compose ps -a
+\end{lstlisting}
+
+\par Pengecekan status ini penting untuk memastikan port mapping aktif, container dalam status \textit{running}, dan tidak ada error saat startup.
+
+\subsection{Rebuild dan Menjalankan Ulang Service \texttt{be-jwt}}
+\par Ketika ada perubahan pada konfigurasi build atau file \texttt{Dockerfile}, Docker Compose menyediakan perintah \texttt{docker compose build} untuk membangun ulang image. Setelah rebuild, service dapat dijalankan ulang menggunakan \texttt{docker compose restart}. Proses rebuild dan restart service \texttt{be-jwt} ditunjukkan pada Gambar \ref{fig:p10-08-compose-rebuild}.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{resource/dokumentasi/8 - ujicoba Rebuild dan Menjalankan Ulang.png}
+  \caption{Rebuild image dan restart service \texttt{be-jwt}}
+  \label{fig:p10-08-compose-rebuild}
+\end{figure}
+
+\begin{lstlisting}[caption={Perintah rebuild dan restart service \texttt{be-jwt}}, label={lst:p10-compose-rebuild}]
+docker compose build be-jwt
+docker compose restart be-jwt
+\end{lstlisting}
+
+\par Pada kasus hot reload (perubahan kode PHP biasa), rebuild image umumnya tidak diperlukan karena file sudah di-mount melalui \texttt{volumes}. Namun, rebuild tetap diperlukan jika perubahan terkait dependensi atau konfigurasi image.
+
+\subsection{Menambahkan Service \texttt{database\_mysql} (MySQL)}
+\par Setelah service API berhasil dijalankan, tahap berikutnya sesuai modul adalah menambahkan service database di Docker Compose. Pada praktikum ini saya menambahkan service \texttt{database\_mysql} menggunakan image \texttt{mysql:8.0}. Penambahan service database ditunjukkan pada Gambar \ref{fig:p10-09-add-mysql}.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{resource/dokumentasi/9 -  menambahkan database_mysql.png}
+  \caption{Menambahkan service \texttt{database\_mysql} (MySQL) pada \texttt{docker-compose.yml}}
+  \label{fig:p10-09-add-mysql}
+\end{figure}
+
+\par Pada service ini, saya menggunakan variabel dari \texttt{.env} untuk mengisi \texttt{MYSQL\_DATABASE}, \texttt{MYSQL\_USER}, dan \texttt{MYSQL\_PASSWORD}. Selain itu, file \texttt{php\_jwt\_db.sql} dimount ke direktori init MySQL agar database dapat dibuat otomatis saat container pertama kali dijalankan.
+
+\subsection{Penambahan Persistent Volume MySQL}
+\par Karena data pada container bersifat tidak persisten jika container dihapus, modul menyarankan penggunaan persistent volume agar data MySQL tetap tersimpan. Pada praktikum ini saya menambahkan volume bernama \texttt{db\_data} (Gambar \ref{fig:p10-10-volume}).
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{resource/dokumentasi/10 - Penambahan Persistent Volume.png}
+  \caption{Menambahkan persistent volume \texttt{db\_data} untuk MySQL}
+  \label{fig:p10-10-volume}
+\end{figure}
+
+\par Volume ini digunakan untuk mounting direktori data MySQL ke \texttt{/var/lib/mysql}, sehingga ketika container database restart, data tidak hilang.
+
+\subsection{Menambahkan Ketergantungan Service (\texttt{depends\_on})}
+\par Agar service API tidak berjalan sebelum database siap, saya menambahkan konfigurasi \texttt{depends\_on} pada service \texttt{be-jwt}. Penambahan ketergantungan service ditunjukkan pada Gambar \ref{fig:p10-11-depends-on}.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{resource/dokumentasi/11 -  tambahkan depends on .png}
+  \caption{Menambahkan \texttt{depends\_on} pada service \texttt{be-jwt}}
+  \label{fig:p10-11-depends-on}
+\end{figure}
+
+\par Dengan \texttt{depends\_on}, Docker Compose akan menjalankan container database lebih dahulu, lalu menjalankan service API setelahnya. Walaupun ini belum menjamin database sudah \textit{ready}, konfigurasi ini membantu mengurangi kemungkinan error saat startup.
+
+\subsection{Mengubah \texttt{DB\_HOST} menjadi Nama Service MySQL}
+\par Setelah database dijalankan di Docker Compose, host database sebaiknya tidak lagi menggunakan IP VPS, melainkan menggunakan nama service \texttt{database\_mysql}. Hal ini karena Docker menyediakan DNS internal yang dapat menerjemahkan nama service menjadi alamat container dalam network Compose. Perubahan nilai \texttt{DB\_HOST} pada \texttt{.env} ditunjukkan pada Gambar \ref{fig:p10-12-db-host-service}.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{resource/dokumentasi/12 - mengganti env db host ke database_mysql.png}
+  \caption{Mengubah \texttt{DB\_HOST} ke \texttt{database\_mysql} agar koneksi DB menggunakan jaringan Docker Compose}
+  \label{fig:p10-12-db-host-service}
+\end{figure}
+
+\par Setelah perubahan ini, koneksi dari aplikasi PHP di container \texttt{be-jwt} akan diarahkan ke container MySQL dalam network \texttt{psait}, bukan ke MySQL yang berjalan di host VPS.
+
+\subsection{Menjalankan Ulang Docker Compose untuk Service Database}
+\par Setelah seluruh konfigurasi service database ditambahkan, saya menjalankan kembali Docker Compose agar service \texttt{database\_mysql} dibuat dan dijalankan. Proses menjalankan ulang Docker Compose ditunjukkan pada Gambar \ref{fig:p10-13-compose-up-db}.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{resource/dokumentasi/13 - Jalankan docker compose up untuk membuat service datbase.png}
+  \caption{Menjalankan \texttt{docker compose up -d} setelah menambahkan service database}
+  \label{fig:p10-13-compose-up-db}
+\end{figure}
+
+\par Pada tahap ini Docker akan menarik image \texttt{mysql:8.0}, membuat volume \texttt{db\_data}, serta menjalankan container database. Setelah semua service aktif, pengujian API dapat dilakukan.
+
+\subsection{Pengujian Endpoint API Menggunakan Hoppscotch}
+\par Setelah service API dan database aktif, saya melakukan pengujian endpoint menggunakan Hoppscotch. Untuk mempermudah, saya membuat environment variable \texttt{link} sebagai base URL (misalnya \texttt{http://10.33.35.96:8000}) dan variable \texttt{jwt} untuk menyimpan token hasil login yang saya masukkan ke env dari script (ada di 2 pertemuan sebelumnya). Pengaturan environment ditunjukkan pada Gambar \ref{fig:p10-14-hoppscotch-env}.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{resource/dokumentasi/14 - untuk uji cek env di hoppscotch.png}
+  \caption{Pengaturan environment Hoppscotch (base URL dan token JWT)}
+  \label{fig:p10-14-hoppscotch-env}
+\end{figure}
+
+\par Setelah environment disiapkan, endpoint \texttt{Cek} diuji terlebih dahulu dan berhasil mengembalikan response JSON sederhana (Gambar \ref{fig:p10-15-cek}).
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{resource/dokumentasi/15 - pengujian route cek (root).png}
+  \caption{Pengujian endpoint \texttt{Cek} menggunakan Hoppscotch}
+  \label{fig:p10-15-cek}
+\end{figure}
+
+\par Berikutnya, endpoint \texttt{Register} diuji untuk memastikan data user dapat disimpan ke database (Gambar \ref{fig:p10-16-register}). Setelah register berhasil, endpoint \texttt{Login} diuji untuk memperoleh token JWT (Gambar \ref{fig:p10-17-login}). Token JWT tersebut digunakan sebagai bearer token untuk mengakses endpoint \texttt{Get All Users} (Gambar \ref{fig:p10-18-users}).
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{resource/dokumentasi/16 - register.png}
+  \caption{Pengujian endpoint \texttt{Register} menggunakan Hoppscotch}
+  \label{fig:p10-16-register}
+\end{figure}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{resource/dokumentasi/17 - login.png}
+  \caption{Pengujian endpoint \texttt{Login} dan mendapatkan token JWT}
+  \label{fig:p10-17-login}
+\end{figure}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{resource/dokumentasi/18 - get all users.png}
+  \caption{Pengujian endpoint \texttt{Get All Users} menggunakan bearer token}
+  \label{fig:p10-18-users}
+\end{figure}
+
+\par Hasil pengujian tersebut menunjukkan bahwa API-API itu semua berhasil terhubung dengan database MySQL di Docker Compose, proses register dan login berjalan dengan benar, dan endpoint yang memerlukan autentikasi (Get All Users) dapat diakses menggunakan token JWT.
+
+\subsection{Uji \textit{Hot Reload} Menggunakan Volume Binding}
+\par Salah satu tujuan penggunaan Docker Compose adalah memanfaatkan \textit{hot reload} melalui fitur volume binding. Karena folder project dimount ke container, perubahan kode di host dapat langsung tercermin di container tanpa rebuild image lagi.
+
+\par Untuk membuktikan hot reload, saya menambahkan route \texttt{/docker} pada router \texttt{index.php} yang mengembalikan JSON \texttt{"Docker is working"}. Proses penambahan route ditunjukkan pada Gambar \ref{fig:p10-19-add-route-docker}, sedangkan hasil pengujiannya pada Hoppscotch ditunjukkan pada Gambar \ref{fig:p10-20-cek-docker}.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{resource/dokumentasi/19 - menambahkan untuk menguji hot reload jadi ketika ini di save perubahan langsung ada di docker.png}
+  \caption{Menambahkan route \texttt{/docker} untuk uji hot reload}
+  \label{fig:p10-19-add-route-docker}
+\end{figure}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{resource/dokumentasi/20 - cek api docker.png}
+  \caption{Hasil pengujian route \texttt{/docker}: perubahan langsung terlihat tanpa rebuild}
+  \label{fig:p10-20-cek-docker}
+\end{figure}
+
+\par Dari hasil tersebut terlihat bahwa setelah file disimpan, endpoint \texttt{/docker} langsung dapat diakses dan mengembalikan response sesuai perubahan tanpa perlu rebuild image lagi, sehingga fitur hot reload dari Docker Compose berhasil diterapkan.
+
+\subsection{Tugas \& Analisis: phpMyAdmin dan CRUD Database}
+\par Pada bagian ini saya mengerjakan Tugas \& Analisis yang diberikan pada modul, yaitu menambahkan service phpMyAdmin ke dalam orkestrasi Docker Compose dan melakukan CRUD database aplikasi menggunakan phpMyAdmin.
+
+\subsubsection{Menambahkan Service phpMyAdmin ke Docker Compose}
+\par Saya menambahkan service baru bernama \texttt{phpmyadmin} menggunakan image resmi dari link yang diberikan dibawah \texttt{phpmyadmin/phpmyadmin} dari Docker Hub (\url{https://hub.docker.com/_/phpmyadmin/}). Agar tidak tabrakan dengan Apache2 di VPS (port 80), service phpMyAdmin di-forward ke port \texttt{8081} pada host (\texttt{8081:80}). Konfigurasi penambahan phpMyAdmin ditunjukkan pada Gambar \ref{fig:p10-21-add-phpmyadmin}.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{resource/dokumentasi/21 - tambahkan phpmyadmin di docker compose.png}
+  \caption{Menambahkan service phpMyAdmin pada \texttt{docker-compose.yml} dengan port \texttt{8081:80}}
+  \label{fig:p10-21-add-phpmyadmin}
+\end{figure}
+
+\par Setelah konfigurasi ditambahkan, saya menjalankan Docker Compose kembali untuk membuat dan menjalankan service phpMyAdmin. Proses menjalankan Docker Compose ditunjukkan pada Gambar \ref{fig:p10-22-up-phpmyadmin}.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{resource/dokumentasi/22 - tugas 1- jalankan docker compose up untuk membuat servis phpmyadmin.png}
+  \caption{Menjalankan Docker Compose untuk membuat service phpMyAdmin}
+  \label{fig:p10-22-up-phpmyadmin}
+\end{figure}
+
+\par Dengan konfigurasi tersebut, phpMyAdmin dapat diakses melalui browser pada alamat ip dengan port 8081 \texttt{http://10.33.35.96:8081}. Selain itu, konfigurasi \texttt{PMA\_HOST=database\_mysql} memastikan phpMyAdmin terhubung ke service MySQL di network Docker Compose.
+
+\subsubsection{CRUD Database Menggunakan phpMyAdmin}
+\par Setelah phpMyAdmin berjalan, saya memastikan bahwa CRUD pada database aplikasi dapat dilakukan dengan benar.
+
+\par Pertama, saya memastikan phpMyAdmin berhasil terhubung ke database \texttt{sait\_db} dan dapat menampilkan isi tabel \texttt{users} (Gambar \ref{fig:p10-23-phpmyadmin-browse}).
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{resource/dokumentasi/23 - tugas 2 - tampilan php myadmin.png}
+  \caption{phpMyAdmin berhasil menampilkan database \texttt{sait\_db} dan tabel \texttt{users}}
+  \label{fig:p10-23-phpmyadmin-browse}
+\end{figure}
+
+\par Selanjutnya saya melakukan \textit{Create} dengan menambahkan data user baru menggunakan menu \texttt{Insert}. Form pengisian data ditunjukkan pada Gambar \ref{fig:p10-24-insert} dan hasil insert ditunjukkan pada Gambar \ref{fig:p10-25-insert-result}.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{resource/dokumentasi/24 - tugas 2 - langkah insert.png}
+  \caption{CRUD (Create): memasukkan data baru ke tabel \texttt{users}}
+  \label{fig:p10-24-insert}
+\end{figure}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{resource/dokumentasi/25 - tugas 2- hasil insert.png}
+  \caption{Hasil CRUD (Create): data baru berhasil ditambahkan ke tabel \texttt{users}}
+  \label{fig:p10-25-insert-result}
+\end{figure}
+
+\par Setelah itu, saya melakukan \textit{Update} dengan mengubah nilai \texttt{last\_name} pada salah satu data user. Proses update ditunjukkan pada Gambar \ref{fig:p10-26-update}.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{resource/dokumentasi/26 - tugas 2 - edit lastname.png}
+  \caption{CRUD (Update): mengubah data \texttt{last\_name} pada tabel \texttt{users}}
+  \label{fig:p10-26-update}
+\end{figure}
+
+\par Terakhir, saya melakukan \textit{Delete} untuk menghapus data yang telah ditambahkan. Proses delete ditunjukkan pada Gambar \ref{fig:p10-27-delete} dan hasil delete ditunjukkan pada Gambar \ref{fig:p10-28-delete-result}.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{resource/dokumentasi/27 - tugas 2 - proses delete.png}
+  \caption{CRUD (Delete): proses konfirmasi penghapusan data}
+  \label{fig:p10-27-delete}
+\end{figure}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{resource/dokumentasi/28 - tugas 2 - hasil delete.png}
+  \caption{Hasil CRUD (Delete): data berhasil dihapus dari tabel \texttt{users}}
+  \label{fig:p10-28-delete-result}
+\end{figure}
+
+\par Dengan rangkaian CRUD tersebut, dapat disimpulkan bahwa service phpMyAdmin berhasil ditambahkan ke Docker Compose, terhubung dengan service MySQL, dan dapat digunakan untuk mengelola data database aplikasi.
+
 \section{Kesimpulan}
+
+\par Kesimpulan dari praktikum \textit{Docker Compose} adalah sebagai berikut:
+\begin{enumerate}
+  \item Konfigurasi koneksi database berhasil dimigrasikan dari model \textit{hardcode} ke model \texttt{.env}, sehingga parameter koneksi dapat diubah tanpa memodifikasi kode.
+  \item Docker Compose berhasil digunakan untuk mengorkestrasi beberapa service dalam satu konfigurasi, yaitu service API PHP (\texttt{be-jwt}) dan service database MySQL (\texttt{database\_mysql}).
+  \item Persistent volume \texttt{db\_data} berhasil diterapkan untuk menyimpan data MySQL secara persisten, serta SQL init \texttt{php\_jwt\_db.sql} membantu pembuatan database saat pertama kali container dijalankan.
+  \item Konfigurasi \texttt{depends\_on} dan pengubahan \texttt{DB\_HOST} ke \texttt{database\_mysql} membantu memastikan koneksi API ke database berjalan melalui jaringan internal Docker Compose.
+  \item Fitur volume binding pada service API berhasil digunakan untuk \textit{hot reload}; perubahan kode dapat langsung terlihat tanpa rebuild image.
+  \item Service phpMyAdmin berhasil ditambahkan ke Docker Compose dengan port forwarding \texttt{8081:80} dan terbukti dapat melakukan operasi CRUD pada tabel \texttt{users}.
+  \item Hoppscotch mempermudah pengujian endpoint karena base URL dan token JWT dapat disimpan sebagai environment variable, sehingga request dapat dijalankan berulang dengan konsisten.
+\end{enumerate}
 
 \section{Daftar Pustaka}
 \printbibliography[heading=none]
