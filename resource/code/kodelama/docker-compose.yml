@@ -1,0 +1,56 @@
+services:
+  be-jwt:
+    container_name: php-jwt-zan
+    build: .
+    ports: 
+      - "8000:8000"
+    volumes:
+      - .:/var/www/html
+    env_file:
+      - .env
+    restart: unless-stopped
+    networks:
+      - psait
+    depends_on:
+      - database_mysql
+
+  database_mysql:
+    image: mysql:8.0
+    container_name: db_mysql_jwt
+    restart: unless-stopped
+
+    networks:
+      - psait
+
+    volumes:
+      - db_data:/var/lib/mysql
+      - ./php_jwt_db.sql:/docker-entrypoint-initdb.d/init.sql
+
+    environment:
+      MYSQL_DATABASE: ${DB_NAME}
+      MYSQL_USER: ${DB_USER}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+      MYSQL_ALLOW_EMPTY_PASSWORD: "yes"
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASS:-""}
+  
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin
+    container_name: phpmyadmin_jwt
+    restart: unless-stopped
+    ports:
+      - "8081:80"
+    environment:
+      PMA_HOST: database_mysql
+      PMA_PORT: 3306
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASS:-""}
+    depends_on:
+      - database_mysql
+    networks:
+      - psait
+
+volumes:
+  db_data:
+  
+networks:
+  psait:
+    driver: bridge
