@@ -282,6 +282,372 @@ Dosen Pengampu & : & \DosenPengampu \\
 
 \section{Hasil dan Pembahasan}
 
+\par Pada pertemuan ini saya melakukan implementasi CI/CD pipeline lokal menggunakan Gitea Actions untuk melakukan deployment otomatis aplikasi REST API berbasis PHP (JWT) ke server VPS. Infrastruktur CI/CD dibangun secara \textit{self-hosted} di VPS dengan menjalankan layanan Gitea menggunakan Docker Compose, kemudian menambahkan Gitea Runner untuk mengeksekusi \textit{workflow}. Praktikum ini berfokus pada otomatisasi proses \textit{pull}, \textit{build}, dan \textit{restart} container aplikasi setiap ada perubahan kode yang di-\textit{push} ke repository.
+
+\par Secara ringkas, langkah yang saya lakukan adalah sebagai berikut:
+\begin{enumerate}
+  \item Mengubah \texttt{docker-compose.yml} 
+  \item Perubahan env database ke mysql yang di server bukan yang docker,
+  \item Instalasi Gitea menggunakan Docker Compose di VPS,
+  \item Clone repository jwt di local pc
+  \item Implementasi Gitea runner untuk CICD
+  \item Penambahan enpoint baru pada aplikasi untuk memudahkan verifikasi hasil deployment
+  \item Push Aplikasi ke Gitea dan menjalankan pipeline untuk memverifikasi hasil deployment
+  \item Cek action CICD di aplikasi (enpoint baru).
+  \item Mengerjakan tugas 
+    \begin{enumerate}
+      \item Tugas Anda adalah menjalankan file test matematika ke dalam Actions workflows yang telah kita buat. Modifikasi deploys.yaml agar runner yang ada di gitea mampu membatalkan aksi deploy jika logika sederhana tersebut salah! Screenshots juga detail workflow Actions yang ada di Gitea ketika sudah selesai berjalan! \ref{fig:p11-modul-161} \ref{fig:p11-modul-162}
+      \item MUbah nilai dari a menjadi 55 dan screenshot apa yang terjadi di Actions Gitea! \ref{fig:p11-modul-162}
+    \end{enumerate}
+\end{enumerate}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{resource/modul/Modul Praktikum Sistem Administrasi dan Informasi Terdistribusi 2026 v3_page-0161.jpg}
+  \caption{Instruksi tugas pada modul praktikum - 1}
+  \label{fig:p11-modul-161}
+\end{figure}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{resource/modul/Modul Praktikum Sistem Administrasi dan Informasi Terdistribusi 2026 v3_page-0162.jpg}
+  \caption{Instruksi tugas pada modul praktikum - 2}
+  \label{fig:p11-modul-162}
+\end{figure}
+
+\subsection{Perubahan Docker Compose untuk Deployment Aplikasi}
+
+\par Aplikasi yang digunakan sebagai objek deployment adalah REST API JWT dari pertemuan sebelumnya. Pada tahap ini saya melakukan beberapa penyesuaian pada aplikasi agar lebih sesuai dengan proses deployment yang akan dilakukan melalui Gitea Actions. Penyesuaian tersebut meliputi penyederhanaan konfigurasi Docker Compose dan penyesuaian environment variabel untuk koneksi database MySQL yang sudah berjalan di VPS.
+
+\par Perubahan yang saya lakukan adalah menyederhanakan stack Docker Compose pada versi baru. Pada kode lama, file \texttt{docker-compose.yml} menjalankan tiga service sekaligus (\texttt{be-jwt}, \texttt{database\_mysql}, dan \texttt{phpmyadmin}) serta menggunakan \texttt{depends\_on} untuk memastikan service API menunggu database. Pada versi baru, service database dan phpMyAdmin dikomentari karena database MySQL sudah berjalan sebagai service terpisah di VPS, sehingga proses deployment cukup fokus pada rebuild dan restart service API. Proses penyederhanaan ini ditunjukkan pada Gambar \ref{fig:p11-01-compose-comment}.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{resource/dokumentasi/1 - Edit file docker compose yml dengan mencoment beberapa baeis yang tidak diperlukan.png}
+  \caption{Menyederhanakan \texttt{docker-compose.yml} dengan mengomentari service yang tidak diperlukan}
+  \label{fig:p11-01-compose-comment}
+\end{figure}
+
+\par Perbandingan konfigurasi \texttt{docker-compose.yml} pada kode lama dan kode baru dirangkum pada Kode \ref{lst:p11-compose-old} dan Kode \ref{lst:p11-compose-new}.
+
+\lstinputlisting[caption={Konfigurasi \texttt{docker-compose.yml} pada kode lama}, label={lst:p11-compose-old}]{resource/code/kodelama/docker-compose.yml}
+
+\lstinputlisting[caption={Konfigurasi \texttt{docker-compose.yml} pada kode baru}, label={lst:p11-compose-new}]{resource/code/kodebaru/docker-compose.yml}
+
+\par Terlihat bahwa pada kode baru, service \texttt{database\_mysql} dan \texttt{phpmyadmin} dikomentari, sehingga hanya service \texttt{be-jwt} yang akan dijalankan. Hal ini memungkinkan proses deployment menjadi lebih sederhana dan fokus pada aplikasi API saja, sementara database MySQL tetap berjalan secara terpisah di VPS.
+
+\subsection{Menyiapkan Environment MySQL pada Host}
+
+\par Karena service database MySQL telah dipisahkan dari \texttt{docker-compose.yml} milik aplikasi API, maka saya perlu memastikan bahwa MySQL pada VPS dapat diakses. Langkah yang dilakukan adalah dengan mengubah environment variabel host database agar mengarah langsung ke VPS dan mengecek status service MySQL tersebut. Proses ini ditunjukkan pada Gambar \ref{fig:p11-02-env-mysql} dan Gambar \ref{fig:p11-03-status-mysql}.
+
+\par Perubahannya sebagai berikut pada listing \ref{lst:p11-check-mysql}, di mana nilai \texttt{DB\_HOST} diubah menjadi alamat IP VPS, sehingga aplikasi API nantinya akan terhubung ke MySQL yang berjalan di VPS.
+
+\begin{lstlisting}[caption={Perintah untuk mengecek status layanan MySQL di VPS}, label={lst:p11-check-mysql}]
+DB_HOST=http://10.33.35.96 #Awalnya database_mysql
+DB_PORT=3306
+DB_NAME=sait_db
+DB_USER=fauzan
+DB_PASSWORD=fauzan123
+\end{lstlisting}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{resource/dokumentasi/2 - Ganti Env untuk mysql ke server.png}
+  \caption{Mengubah file \texttt{.env} agar \texttt{DB\_HOST} menggunakan alamat VPS}
+  \label{fig:p11-02-env-mysql}
+\end{figure}
+
+\par Terlihat pada gambar diatas bahwa nilai \texttt{DB\_HOST} diubah menjadi alamat IP VPS, sehingga aplikasi API nantinya akan terhubung ke MySQL yang berjalan di VPS. Setelah perubahan ini dilakukan, saya menjalankan perintah untuk mengecek status layanan MySQL di VPS guna memastikan bahwa layanan tersebut aktif dan siap menerima koneksi (Gambar \ref{fig:p11-03-status-mysql}).
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{resource/dokumentasi/3 - Cek status mysql.png}
+  \caption{Mengecek status layanan MySQL di server VPS}
+  \label{fig:p11-03-status-mysql}
+\end{figure}
+
+\par Terlihat pada gambar di atas bahwa layanan MySQL sedang berjalan dengan status \texttt{active (running)}, sehingga siap digunakan sebagai database untuk aplikasi API yang akan dideploy melalui Gitea Actions.
+
+\subsection{Menjalankan Gitea Self-Hosted di VPS}
+
+\par Setelah aplikasi siap, langkah selanjutnya adalah menyiapkan infrastruktur CI/CD yaitu Gitea. Gitea merupakan layanan Git \textit{self-hosted} yang ringan dan mudah dijalankan melalui Docker. Pertama, saya membuat folder khusus untuk gitea dan membuat file \texttt{docker-compose.yml} di dalamnya (Gambar \ref{fig:p11-04-folder-gitea} dan \ref{fig:p11-05-compose-gitea}).
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{resource/dokumentasi/4 - Buat folder gitea.png}
+  \caption{Membuat direktori khusus untuk Gitea di VPS}
+  \label{fig:p11-04-folder-gitea}
+\end{figure}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{resource/dokumentasi/5 - Buat docker compose yml di folder gitea.png}
+  \caption{Membuat konfigurasi \texttt{docker-compose.yml} untuk menjalankan Gitea}
+  \label{fig:p11-05-compose-gitea}
+\end{figure}
+
+\par Setelah file tersebut dibuat, layanan Gitea dijalankan menggunakan perintah \texttt{docker compose up -d} (Gambar \ref{fig:p11-06-gitea-up}). Gitea kemudian dapat diakses melalui browser. Pada tampilan awal, saya melakukan proses instalasi dan pendaftaran akun administrator (Gambar \ref{fig:p11-07-install-gitea} dan \ref{fig:p11-08-register-gitea}).
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{resource/dokumentasi/6 - Docker compose up.png}
+  \caption{Menjalankan service Gitea menggunakan \texttt{docker compose up -d}}
+  \label{fig:p11-06-gitea-up}
+\end{figure}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{resource/dokumentasi/7 - Tampilan isntalasi gitea.png}
+  \caption{Halaman awal instalasi Gitea di browser}
+  \label{fig:p11-07-install-gitea}
+\end{figure}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{resource/dokumentasi/8 - pendaftaran akun gitea.png}
+  \caption{Pendaftaran akun administrator Gitea}
+  \label{fig:p11-08-register-gitea}
+\end{figure}
+
+\par Setelah proses instalasi dan pendaftaran selesai, Gitea siap digunakan untuk menyimpan \textit{source code} aplikasi (Gambar \ref{fig:p11-09-dashboard-gitea}).
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{resource/dokumentasi/9 - Halaman utama gitea.png}
+  \caption{Halaman dashboard utama Gitea setelah login}
+  \label{fig:p11-09-dashboard-gitea}
+\end{figure}
+
+\subsection{Mendaftarkan Gitea Runner}
+
+\par Agar Gitea dapat menjalankan \textit{pipeline} (Gitea Actions), diperlukan satu layanan tambahan bernama Gitea Runner. Proses pendaftarannya dimulai dengan mengakses menu Site Administration di Gitea dan mendaftarkan Runner baru untuk mendapatkan token (Gambar \ref{fig:p11-10-site-admin} dan \ref{fig:p11-11-new-runner}).
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{resource/dokumentasi/10 - ke halaman site administration.png}
+  \caption{Mengakses halaman Site Administration pada Gitea}
+  \label{fig:p11-10-site-admin}
+\end{figure}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{resource/dokumentasi/11 - new runner.png}
+  \caption{Membuat \textit{Runner} baru untuk mendapatkan token pendaftaran}
+  \label{fig:p11-11-new-runner}
+\end{figure}
+
+\par Setelah token didapatkan, file \texttt{docker-compose.yml} milik Gitea dimodifikasi dengan menambahkan service \texttt{gitea-runner} dengan memasukkan token tersebut sebagai \textit{environment variable} (Gambar \ref{fig:p11-12-modifikasi-compose}).
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{resource/dokumentasi/12 - modifikasi docker compose yml.png}
+  \caption{Menambahkan service \texttt{gitea-runner} pada \texttt{docker-compose.yml}}
+  \label{fig:p11-12-modifikasi-compose}
+\end{figure}
+
+\par Selanjutnya, \texttt{docker compose up -d} dijalankan kembali agar runner aktif (Gambar \ref{fig:p11-13-runner-up}). Status runner yang berhasil terhubung dapat diverifikasi melalui halaman dashboard Gitea, yang menunjukkan bahwa runner sudah \textit{online} dan siap mengeksekusi \textit{workflow} (Gambar \ref{fig:p11-14-runner-online}).
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{resource/dokumentasi/13 - jalankan docker compose lagi.png}
+  \caption{Menjalankan ulang Docker Compose untuk mengaktifkan Runner}
+  \label{fig:p11-13-runner-up}
+\end{figure}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{resource/dokumentasi/14 - hasilnya di gitea.png}
+  \caption{Status Runner yang telah berhasil \textit{online} di Gitea}
+  \label{fig:p11-14-runner-online}
+\end{figure}
+
+\subsection{Membuat Repositori dan Push Source Code}
+
+\par Langkah berikutnya adalah membuat repositori baru di Gitea untuk menampung kode aplikasi (Gambar \ref{fig:p11-15-new-repo} dan \ref{fig:p11-16-fill-repo}). Setelah repositori berhasil dibuat (Gambar \ref{fig:p11-17-repo-created}), langkah selanjutnya adalah melakukan \textit{push} source code lokal ke Gitea.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{resource/dokumentasi/15 - klik new repositori.png}
+  \caption{Membuat repositori baru melalui antarmuka Gitea}
+  \label{fig:p11-15-new-repo}
+\end{figure}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{resource/dokumentasi/16 - pengisian repo baru.png}
+  \caption{Mengisi detail repositori baru}
+  \label{fig:p11-16-fill-repo}
+\end{figure}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{resource/dokumentasi/17 - Hasil create.png}
+  \caption{Repositori aplikasi kosong yang berhasil dibuat}
+  \label{fig:p11-17-repo-created}
+\end{figure}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{resource/dokumentasi/18 - tambahkan gitignore.png}
+  \caption{Menambahkan file \texttt{.gitignore} untuk mengamankan file \texttt{.env}}
+  \label{fig:p11-18-gitignore}
+\end{figure}
+
+\par Proses unggah ke Gitea dilakukan dengan menjalankan perintah \texttt{git push} pada repositori lokal (Gambar \ref{fig:p11-19-push}). Setelah \textit{push} berhasil, source code aplikasi akan tampil di halaman repositori Gitea (Gambar \ref{fig:p11-20-push-result}).
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{resource/dokumentasi/19 - Push ke gitea.png}
+  \caption{Melakukan push source code lokal ke Gitea}
+  \label{fig:p11-19-push}
+\end{figure}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{resource/dokumentasi/20 - hasil gitea.png}
+  \caption{Hasil source code yang berhasil terunggah ke Gitea}
+  \label{fig:p11-20-push-result}
+\end{figure}
+
+\par Saya juga melakukan simulasi dengan melakukan proses kloning ulang ke folder lokal lain untuk membuktikan bahwa repositori sudah siap digunakan oleh anggota tim lain (Gambar \ref{fig:p11-21-clone} dan \ref{fig:p11-22-vscode}).
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{resource/dokumentasi/21 - clone di local.png}
+  \caption{Melakukan kloning repositori ke komputer lokal}
+  \label{fig:p11-21-clone}
+\end{figure}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{resource/dokumentasi/22- buka folder hasil clone di vscode.png}
+  \caption{Membuka hasil \textit{clone} di VS Code}
+  \label{fig:p11-22-vscode}
+\end{figure}
+
+\subsection{Membuat File Workflow CI/CD}
+
+\par Inti dari CI/CD pipeline pada Gitea Actions adalah file \textit{workflow} dengan format \texttt{.yaml} yang diletakkan di dalam folder \texttt{.gitea/workflows/}. Saya menambahkan file \texttt{deploys.yaml} yang akan memerintahkan runner melakukan akses SSH ke VPS saat ada \textit{push} ke branch \texttt{main} (Gambar \ref{fig:p11-23-deploys}).
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{resource/dokumentasi/23 - tambahkan file deploys.png}
+  \caption{Membuat file \textit{workflow} \texttt{deploys.yaml} untuk otomatisasi CI/CD}
+  \label{fig:p11-23-deploys}
+\end{figure}
+
+\par Agar \textit{workflow} dapat melakukan SSH dengan aman tanpa menuliskan \textit{credential} secara \textit{hardcode} di dalam repositori, saya menggunakan fitur \textit{Secrets} pada pengaturan repositori Gitea. Saya menambahkan rahasia untuk \texttt{HOST}, \texttt{USERNAME}, dan \texttt{PASSWORD} server VPS (Gambar \ref{fig:p11-24-secret-host}, \ref{fig:p11-25-secret-user}, dan \ref{fig:p11-26-secret-pass}).
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{resource/dokumentasi/24 - tambahkan secret host.png}
+  \caption{Menambahkan Secret untuk \texttt{HOST} SSH}
+  \label{fig:p11-24-secret-host}
+\end{figure}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{resource/dokumentasi/25 - tambahkan secret username.png}
+  \caption{Menambahkan Secret untuk \texttt{USERNAME} SSH}
+  \label{fig:p11-25-secret-user}
+\end{figure}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{resource/dokumentasi/26 - tambahkan secret password.png}
+  \caption{Menambahkan Secret untuk \texttt{PASSWORD} SSH}
+  \label{fig:p11-26-secret-pass}
+\end{figure}
+
+\subsection{Menjalankan Pipeline dan Verifikasi}
+
+\par Setelah seluruh konfigurasi disiapkan, saya menguji otomatisasi tersebut. Sebelum pipeline dijalankan, pengujian akses ke rute \texttt{/api/cicd} menghasilkan \textit{error Not Found} karena versi aplikasi yang berjalan di server belum memiliki endpoint tersebut (Gambar \ref{fig:p11-28-cicd-notfound}).
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{resource/dokumentasi/27 - tambahkan route cicd.png}
+  \caption{Menambahkan endpoint \texttt{/api/cicd} pada \texttt{index.php}}
+  \label{fig:p11-27-route-cicd}
+\end{figure}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{resource/dokumentasi/28 - tidak ditemukan karena cicd belum di jalankan, belum di push.png}
+  \caption{Endpoint \texttt{/api/cicd} belum tersedia sebelum deployment otomatis dilakukan}
+  \label{fig:p11-28-cicd-notfound}
+\end{figure}
+
+\par Kemudian, perubahan (termasuk file \texttt{deploys.yaml} dan route baru) di-\textit{push} ke Gitea (Gambar \ref{fig:p11-29-push-app}). Aksi ini secara otomatis memicu \textit{workflow} Gitea Actions untuk berjalan (Gambar \ref{fig:p11-30-gitea-action}). \textit{Runner} akan terhubung ke VPS via SSH, menarik (\textit{pull}) kode terbaru dari repositori, kemudian melakukan \textit{build} dan me-\textit{restart} container aplikasi.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{resource/dokumentasi/29 - push aplikasi.png}
+  \caption{Melakukan \textit{push} perubahan ke Gitea untuk memicu \textit{pipeline}}
+  \label{fig:p11-29-push-app}
+\end{figure}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{resource/dokumentasi/30 - action di gitea.png}
+  \caption{Proses eksekusi otomatis (\textit{workflow}) yang berjalan di Gitea Actions}
+  \label{fig:p11-30-gitea-action}
+\end{figure}
+
+\par Setelah \textit{pipeline} selesai dijalankan dengan status sukses, saya kembali menguji endpoint \texttt{/api/cicd}. Hasilnya, \textit{response} sukses diterima, yang membuktikan bahwa \textit{deployment} aplikasi berhasil diperbarui secara otomatis tanpa intervensi manual (Gambar \ref{fig:p11-31-cicd-working}).
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{resource/dokumentasi/31 - cicd working.png}
+  \caption{Aplikasi berhasil diperbarui, endpoint \texttt{/api/cicd} mengembalikan respons JSON sukses}
+  \label{fig:p11-31-cicd-working}
+\end{figure}
+
+\subsection{Pengerjaan Tugas}
+\par Selanjutnya saya mengerjakan dua tugas tambahan untuk memastikan alur CI/CD berjalan konsisten. Tugas pertama berfokus pada pengujian perubahan logika program, sedangkan tugas kedua berfokus pada pembuktian bahwa perubahan pada kode sumber dapat memicu deployment otomatis melalui Gitea Actions.
+
+\subsubsection{Tugas 1}
+\par Pada tugas pertama, saya mengubah nilai pada pengujian matematika sederhana agar pipeline dapat divalidasi dari hasil keluaran yang benar. Proses pengujian awal ditunjukkan pada Gambar \ref{fig:p11-32-test-matematika}. Setelah itu, saya melakukan perubahan pada kode deployment dan melakukan \textit{push} ke repository seperti pada Gambar \ref{fig:p11-33-change-push}. Perubahan tersebut kemudian memicu eksekusi workflow di Gitea Actions, yang ditunjukkan pada Gambar \ref{fig:p11-34-run-action}.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{resource/dokumentasi/32 - Tugas 1 - test matematika.png}
+  \caption{Pengujian awal untuk tugas 1 dengan hasil perhitungan matematika sederhana}
+  \label{fig:p11-32-test-matematika}
+\end{figure}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{resource/dokumentasi/33 - Tugas 1 - perubahan kode deploy dan git push.png}
+  \caption{Perubahan kode deployment dan proses \textit{git push} pada tugas 1}
+  \label{fig:p11-33-change-push}
+\end{figure}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{resource/dokumentasi/34 - Tugas 1 - Run action di gitea.png}
+  \caption{Workflow Gitea Actions berjalan setelah perubahan pada tugas 1}
+  \label{fig:p11-34-run-action}
+\end{figure}
+
+\subsubsection{Tugas 2}
+\par Pada tugas kedua, saya mengubah hasil pengujian agar memastikan pipeline kembali berjalan dari awal hingga akhir. Hasil perubahan terlihat pada Gambar \ref{fig:p11-35-change-test}. Setelah kode diperbarui, workflow dijalankan kembali melalui Gitea Actions seperti pada Gambar \ref{fig:p11-36-run-action}.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{resource/dokumentasi/35 - Tugas 2 - mengubah hasil di tes.png}
+  \caption{Perubahan hasil pengujian pada tugas 2}
+  \label{fig:p11-35-change-test}
+\end{figure}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{resource/dokumentasi/36 - Tugas 2 - Run action di gitea.png}
+  \caption{Workflow Gitea Actions dijalankan kembali pada tugas 2}
+  \label{fig:p11-36-run-action}
+\end{figure}
+
+
+
 \section{Kesimpulan}
 
 \section{Daftar Pustaka}
