@@ -1,0 +1,48 @@
+networks:
+  gitea:
+
+services:
+  server:
+    image: docker.gitea.com/gitea:1.25.3
+    container_name: gitea
+    environment:
+      - USER_UID=1000
+      - USER_GID=1000
+      - HTTP_LISTEN=0.0.0.0
+    restart: always
+    networks:
+      - gitea
+    volumes:
+      - ./gitea:/data
+      - /etc/timezone:/etc/timezone:ro
+      - /etc/localtime:/etc/localtime:ro
+    ports:
+      - "3000:3000"
+      - "222:22"
+
+  runner:
+    image: gitea/act_runner:latest
+    container_name: gitea_runner
+    restart: unless-stopped
+    networks:
+      - gitea
+    depends_on:
+      - server
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./runner-data:/data
+    environment:
+      # URL Gitea (satu jaringan Docker Compose)
+      # Pakai nama service agar konsisten dengan DNS compose.
+      - GITEA_INSTANCE_URL=http://server:3000
+
+      # PASTE TOKEN DARI LANGKAH 1 DI SINI
+      # - GITEA_RUNNER_REGISTRATION_TOKEN=PASTE_TOKEN_ANDA_DISINI
+      - GITEA_RUNNER_REGISTRATION_TOKEN=MpDfMlnww4nCg5DFzVJ2A9E1REOf0ZCvnOZKVmAK
+
+      # Nama Runner (Bebas)
+      - GITEA_RUNNER_NAME=runner-1
+
+      # MAPPING LABEL (Sangat Penting untuk Storage Hemat!)
+      # Artinya: Jika ada job 'ubuntu-latest', pakai image berikut.
+      - GITEA_RUNNER_LABELS=ubuntu-latest:docker://node:16-alpine
